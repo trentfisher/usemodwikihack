@@ -3896,7 +3896,12 @@ sub DoSearch {
     return;
   }
   print &GetHeader('', &QuoteHtml(Ts('Search for: %s', $string)), '');
-  print '<br>';
+  # log search results
+  open(SL, ">> $DataDir/searchlog") or
+      print "<p><strong>Could not open searchlog $DataDir/searchlog: $!</p>\n";
+  print SL scalar(localtime(time)), " ", CGI::remote_host(), " $string\n";
+  close(SL);
+  print '<br/>';
   if ( $XSearchDisp ) { # managed by config file (?)
     &PrintSearchResults($string,&SearchTitleAndBody($string)) ;
   } else {
