@@ -200,24 +200,36 @@ $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
 
 # == You should not have to change anything below this line. =============
 $IndentLimit = 20;                  # Maximum depth of nested lists
-$PageDir     = "$DataDir/page";     # Stores page data
-$HtmlDir     = "$DataDir/html";     # Stores HTML versions
-$UserDir     = "$DataDir/user";     # Stores user data
-$KeepDir     = "$DataDir/keep";     # Stores kept (old) page data
-$TempDir     = "$DataDir/temp";     # Temporary files and locks
-$LockDir     = "$TempDir/lock";     # DB is locked if this exists
-$InterFile   = "$DataDir/intermap"; # Interwiki site->url map
-$RcFile      = "$DataDir/rclog";    # New RecentChanges logfile
-$RcOldFile   = "$DataDir/oldrclog"; # Old RecentChanges logfile
-$IndexFile   = "$DataDir/pageidx";  # List of all pages
-$EmailFile   = "$DataDir/emails";   # Email notification lists
 
+# define this as a function in case DataDir was defined in the config file
+sub setDirNames
+{
+    $PageDir     = "$DataDir/page";     # Stores page data
+    $HtmlDir     = "$DataDir/html";     # Stores HTML versions
+    $UserDir     = "$DataDir/user";     # Stores user data
+    $KeepDir     = "$DataDir/keep";     # Stores kept (old) page data
+    $TempDir     = "$DataDir/temp";     # Temporary files and locks
+    $LockDir     = "$TempDir/lock";     # DB is locked if this exists
+    $InterFile   = "$DataDir/intermap"; # Interwiki site->url map
+    $RcFile      = "$DataDir/rclog";    # New RecentChanges logfile
+    $RcOldFile   = "$DataDir/oldrclog"; # Old RecentChanges logfile
+    $IndexFile   = "$DataDir/pageidx";  # List of all pages
+    $EmailFile   = "$DataDir/emails";   # Email notification lists
+}
 if ($RepInterMap) {
   push @ReplaceableFiles, $InterFile;
 }
 
 # The "main" program, called at the end of this script file.
 sub DoWikiRequest {
+  {
+      # if there is a companion file with a "conf" suffix, use it
+      # as a config file
+      my $n = $0;
+      $n =~ s/\.\w+$/.conf/;
+      $ConfigFile = $n if -f $n;
+  }
+
   if ($UseConfig && (-f $ConfigFile)) {
     $ConfigError = '';
     if (!do $ConfigFile) {   # Some error occurred
@@ -232,6 +244,7 @@ sub DoWikiRequest {
       }
     }
   }
+  &setDirNames();
   &InitLinkPatterns();
   if (!&DoCacheBrowse()) {
     eval $BrowseCode;
@@ -413,7 +426,7 @@ sub InitRequest {
     $q->charset($HttpCharset);
   }
   $Now = time;                     # Reset in case script is persistent
-  $ScriptName = pop(@ScriptPath);  # Name used in links
+  $ScriptName = pop(@ScriptPath) unless $ScriptName;  # Name used in links
   $IndexInit = 0;                  # Must be reset for each request
   $InterSiteInit = 0;
   %InterSite = ();
@@ -1298,10 +1311,6 @@ sub GetHeader {
   return $result  if ($embed);
 
   $result .= '<div class=wikiheader>';
-  if ($oldId ne '') {
-    $result .= $q->h3('(' . Ts('redirected from %s', 
-                               &GetEditLink($oldId, $oldId)) . ')');
-  }
   # add start of search form, to keep logo and search box on same line
   if ($TopSearchBox)
   {
@@ -1317,7 +1326,7 @@ sub GetHeader {
     {
       $logoImage .= " align=\"left\"";
     }
-    $result .= "\n  ". &ScriptLink($HomePage, "<$logoImage>")."\n";
+    $result .= &ScriptLink($HomePage, "<$logoImage>")."\n";
   }
   # force a search form at the top of the page
   if ($TopSearchBox)
@@ -1327,12 +1336,21 @@ sub GetHeader {
                   $q->endform . "</div>\n");
   }
 
+  my $redirtext;
+  if ($oldId ne '') {
+      # fix the class name in this link
+      my $l = &GetEditLink($oldId, $oldId);;
+      $l =~ s/class=\w+/class=wikiredirect/;
+      $redirtext = $q->span({class => "wikiredirect"},
+                            ' (' . Ts('redirected from %s', $l . ')'));
+  }
   if ($id ne '') {
     # force link to be in the right css class
     my $link = &GetBackLinksSearchLink($id);
     $link =~ s/<a (.*?)>/<a $1 class=wikiheader>/g;
-    $result .= "  ".$q->h1({class => "wikiheader"}, $link);
+    $result .= "  ".$q->h1({class => "wikiheader"}, $link.$redirtext);
   } else {
+    # this is for built-in pages (no backlinks)
     $result .= $q->h1({class => "wikiheader"}, $title);
   }
   $result .= "\n";
@@ -3208,7 +3226,7 @@ sub DoOtherRequest {
     &DoPost()  if &ValidIdOrDie($id);
     return;
   }
-  &ReportError(T('Invalid URL.'));
+  &ReportError(T('Invalid URL: '.$q->url(-full=>1, -query=>1)));
 }
 
 sub DoEdit {
