@@ -5166,7 +5166,7 @@ sub showDirFiles {
     closedir(DIR);
   }
   if( $fileCount == 0 ) {
-    print "<I>No image files available.</I><BR>\n";
+    print "<I>No image files available.</I><BR/>\n";
   }
   print "</ul>\n";
 }
@@ -5226,28 +5226,28 @@ sub SaveUpload {
   $uploadFilehandle = $q->upload('file');
   if (not $uploadFilehandle)
   {
-      print "<H3>Error: upload failed.<BR><BR>",
-              "'" . $q->cgi_error, "'<BR><BR>";
+      print "<H3>Error: upload failed.<BR/><BR/>",
+              "'" . $q->cgi_error, "'<BR/><BR/>";
       return;
   }
   if (not open(UPLOADFILE, ">$UploadDir$subdir$filename"))
   {
-      print "<H3>Error: unable to write to $UploadDir$subdir$filename: $!<BR><BR>";
+      print "<H3>Error: unable to write to $UploadDir$subdir$filename: $!<BR/><BR/>";
       return;
   }
   while (<$uploadFilehandle>) { print UPLOADFILE; }
   close UPLOADFILE;
 
-  print T('The wiki link to your file is:') . "\n<br><BR>";
+  print T('The wiki link to your file is:') . "\n<br/><BR/>";
   $printFilename = $filename;
   $printFilename =~ s/ /\%20/g;  # Replace spaces with escaped spaces
   if ($q->param('id'))
   {
-      print "image:::".$printFilename."<br/>\n";
+      print "image:".$printFilename."<br/>\n";
   }
   else
   {
-  print "upload:" . $printFilename . "<BR><BR>\n";
+      print "upload:" . $printFilename . "<BR/><BR/>\n";
   }
   if ($filename =~ /${ImageExtensions}$/) {
     print '<HR><img src="' . $UploadUrl . $subdir.$filename . '">' . "\n";
