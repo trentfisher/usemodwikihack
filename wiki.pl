@@ -1731,6 +1731,9 @@ sub CommonMarkup {
       s/\[+([Ii]mage:.+?\.$ImageExtensions)\s+([^\]]+)?\]+/&StoreImage($1, $3)/geo;
       s/\[+([Ii]mage:.+?\.$ImageExtensions)\s*\]+/&StoreImage($1)/geo;
       s/\b([Ii]mage:.+?\.$ImageExtensions)\b/&StoreImage($1)/geo;
+      # this is a special format to introduce a break to stop text flow
+      # around an image (twice for IE bugs)
+      s(\b[Ii]mage:break\b)(<br clear=all><BR clear=all>)go;
     }
     if ($ThinLine) {
       if ($OldThinLine) {  # Backwards compatible, conflicts with headers
@@ -2029,6 +2032,13 @@ sub StoreImage {
   $imgattr->{align} = $param if $param;
   $imgattr->{alt} = $alt if $alt;
 
+  # since browsers don't follow the standard w.r.t the center attribute
+  # we have to hack it
+  if ($param eq "center")
+  {
+      return "<center>".$q->img($imgattr)."</center>";
+  }
+
   return $q->img($imgattr);
 }
 
@@ -2061,10 +2071,10 @@ sub ImageAllowed {
   my ($url) = @_;
   my ($site, $imagePrefixes);
 
-  $imagePrefixes = './uploads|http:|https:|ftp:';
+  $imagePrefixes = $UploadUrl.'|http:|https:|ftp:';
   $imagePrefixes .= '|file:'  if (!$LimitFileUrl);
   return 0  unless ($url =~ /^($imagePrefixes).+\.$ImageExtensions$/);
-  return 0  if ($url =~ /"/);      # No HTML-breaking quotes allowed
+  return 0  if ($url =~ /\"/);      # No HTML-breaking quotes allowed
   return 1  if (@ImageSites < 1);  # Most common case: () means all allowed
   return 0  if ($ImageSites[0] eq 'none');  # Special case: none allowed
   foreach $site (@ImageSites) {
