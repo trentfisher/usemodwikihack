@@ -586,6 +586,7 @@ sub BrowsePage {
   }
   $fullHtml .= '<div class=wikitext>';
   $fullHtml .= &WikiToHTML($Text{'text'});
+  $fullHtml .= '<BR CLEAR=ALL />';  # force end of page past any images
   $fullHtml .= '</div>';
   if (!&GetParam('embed', $EmbedWiki)) {
     $fullHtml .= "<hr class=wikilinefooter>\n";
@@ -1252,7 +1253,15 @@ sub ScriptLinkDiffRevision {
 }
 
 sub GetUploadLink {
-  return &ScriptLink('action=upload', T('Upload'));
+  my $id = shift;
+  my $name = shift || T('Upload');
+
+  if ($FreeLinks) {
+    $id = &FreeToNormal($id);
+    $name =~ s/_/ /g;
+  }
+
+  return &ScriptLink('action=upload'.($id ? '&id='.$id : ""), $name);
 }
 
 sub ScriptLinkTitle {
@@ -1716,6 +1725,9 @@ sub CommonMarkup {
     s/\b$ISBNPattern/&StoreISBN($1)/geo;
     if ($UseUpload) {
       s/$UploadPattern/&StoreUpload($1)/geo;
+      s/\[+([Ii]mage:.+?\.$ImageExtensions)\s+([^\]]+)?\]+/&StoreImage($1, $3)/geo;
+      s/\[+([Ii]mage:.+?\.$ImageExtensions)\s*\]+/&StoreImage($1)/geo;
+      s/\b([Ii]mage:.+?\.$ImageExtensions)\b/&StoreImage($1)/geo;
     }
     if ($ThinLine) {
       if ($OldThinLine) {  # Backwards compatible, conflicts with headers
@@ -1961,6 +1973,60 @@ sub StoreUrl {
   # Next line ensures no empty links are stored
   $link = &StoreRaw($link)  if ($link ne "");
   return $link . $extra;
+}
+
+# from CWICK... with much hacking by trent
+# at this point it's more *inspired* by CWICK.
+sub StoreImage {
+  my $name = shift;
+  my $alt = shift;
+  my $id        =  $OpenPageName;
+  my $leftChar  =  substr( $id, 0, 1 );  # for indexing
+  my $attr      =  "";
+  my ( $link, $target, $len );
+
+  # first break up the image format
+  my ($tag, $param, $caption, $imgName);
+  # captions are not supported
+  if ($name =~ m(^[Ii]mage:(\w*):(\w*):(.+\.$ImageExtensions\z)))
+  {
+      ($param, $caption, $imgName) = ($1, $2, $3);
+  }
+  elsif ($name =~ m(^[Ii]mage:(\w*):(.+\.$ImageExtensions\z)))
+  {
+      ($param, $imgName) = ($1, $2);
+  }
+  elsif ($name =~ m(^[Ii]mage:(.+\.$ImageExtensions\z)))
+  {
+      ($imgName) = ($1);
+  }
+  else
+  {
+      # invalid format
+      return "INVALID $name";
+  }
+
+  # locate the file, first see if it's associated with this page
+  if (-f "$UploadDir/$leftChar/$id/$imgName")
+  {
+      $target = $UploadUrl."/$leftChar/$id/$imgName";
+  }
+  elsif (-f "$UploadDir/$imgName")
+  {
+      $target = $UploadUrl."/$imgName";
+  }
+  else
+  {
+      # no such image... provide a link to upload it
+      return &GetUploadLink($id, T('Upload missing image: '.$imgName.''));
+  }
+
+  my $imgattr = {src => $target,
+                 class => "wikiimage"};
+  $imgattr->{align} = $param if $param;
+  $imgattr->{alt} = $alt if $alt;
+
+  return $q->img($imgattr);
 }
 
 sub UrlLink {
@@ -3353,9 +3419,16 @@ sub DoEdit {
     $MainPage = $id;
     $MainPage =~ s|/.*||;  # Only the main page name (remove subpage)
     print &WikiToHTML($oldText) . "<hr class=wikilinefooter>\n";
+    print '<BR CLEAR=ALL />';  # force end of page past any images
     print "<h2>", T('Preview only, not yet saved'), "</h2>\n";
     print '</div>';
   }
+
+  # image upload stuff
+  showDirFiles($id);
+  print &GetUploadLink($id, T('Upload images for this page')) . "<BR>\n";
+  print $q->br();
+
   print '<div class=wikifooter>';
   print &GetHistoryLink($id, T('View other revisions')) . "<br>\n";
   print &GetGotoBar($id);
@@ -5071,21 +5144,61 @@ sub DoDeletePage {
   print &GetCommonFooter();
 }
 
+# from CWICK...
+sub showDirFiles {
+  my $id = shift;
+  my ( $leftChar, $targetDir, $nextname, $fileCount );
+
+  $leftChar   =  substr( $id, 0, 1 );
+  $targetDir  =  "$UploadDir/$leftChar/$id";
+
+  $fileCount  =  0;
+  print "<h3>Local image file list:</h3>\n";
+  print "<ul>";
+  if( opendir( DIR, $targetDir) ) {
+    while( $nextname = readdir( DIR ) )  {
+      if( substr( $nextname, 0, 1 ) ne '.' ) {
+        print $q->li($q->a({-href => "$UploadUrl/$leftChar/$id/$nextname"},
+                           $nextname)),"\n";
+        $fileCount  =  $fileCount + 1;
+      }
+    }
+    closedir(DIR);
+  }
+  if( $fileCount == 0 ) {
+    print "<I>No image files available.</I><BR>\n";
+  }
+  print "</ul>\n";
+}
+
 # Thanks to Ross Kowalski and Iliyan Jeliazkov for original uploading code
 sub DoUpload {
   print &GetHeader('', T('File Upload Page'), '');
   if (!$AllUpload) {
     return if (!&UserIsEditorOrError());
   }
-  print '<p>' . Ts('The current upload size limit is %s.', $MaxPost) . ' '
-        . Ts('Change the %s variable to increase this limit.', '$MaxPost');
-  print '</p><br>';
-  print '<FORM METHOD="post" ACTION="' . $ScriptName
-        . '" ENCTYPE="multipart/form-data">';
-  print '<input type="hidden" name="upload" value="1" />';
-  print 'File to Upload: <INPUT TYPE="file" NAME="file"><br><BR>';
-  print '<INPUT TYPE="submit" NAME="Submit" VALUE="Upload">';
-  print '</FORM>';
+  # XXX intro text here...
+  print $q->p(Ts('The current upload size limit is %s.', $MaxPost),
+              Ts('Change the %s variable to increase this limit.',
+                 '$MaxPost'));
+  print $q->br();
+  print $q->start_form(-method => "post",
+                       -action => $ScriptName,
+                       -enctype => "multipart/form-data");
+  print $q->hidden("upload", "1");
+  print 'File to Upload: ', $q->filefield(-name=>"file");
+  print $q->br(),$q->br();
+  print $q->submit(-name  => "Submit",
+                   -value => "Upload");
+  if (my $id = $q->param('id'))
+  {
+      print $q->hidden("id", $id);
+      print $q->p("Image to be associated with the page",
+                  &GetPageLink($id));
+      showDirFiles($id);
+  }
+  print $q->end_form();
+
   print &GetCommonFooter(); 
 }
 
@@ -5100,16 +5213,44 @@ sub SaveUpload {
   $UploadUrl .= '/'  if (substr($UploadUrl, -1, 1) ne '/');  # End with /
   $filename = $q->param('file');
   $filename =~ s/.*[\/\\](.*)/$1/;  # Only name after last \ or /
+  # if it's a per-page upload, prepend dirs
+  my $subdir = "";
+  if (my $id = $q->param('id'))
+  {
+      my $first = substr($id, 0, 1);
+      $subdir = "$first/$id/";
+      mkdir($UploadDir.$first, 0777) unless -d $UploadDir.$first;
+      mkdir($UploadDir.$subdir, 0777) unless -d $UploadDir.$subdir;
+  }
+
   $uploadFilehandle = $q->upload('file');
-  open UPLOADFILE, ">$UploadDir$filename";
+  if (not $uploadFilehandle)
+  {
+      print "<H3>Error: upload failed.<BR><BR>",
+              "'" . $q->cgi_error, "'<BR><BR>";
+      return;
+  }
+  if (not open(UPLOADFILE, ">$UploadDir$subdir$filename"))
+  {
+      print "<H3>Error: unable to write to $UploadDir$subdir$filename: $!<BR><BR>";
+      return;
+  }
   while (<$uploadFilehandle>) { print UPLOADFILE; }
   close UPLOADFILE;
+
   print T('The wiki link to your file is:') . "\n<br><BR>";
   $printFilename = $filename;
   $printFilename =~ s/ /\%20/g;  # Replace spaces with escaped spaces
+  if ($q->param('id'))
+  {
+      print "image:::".$printFilename."<br/>\n";
+  }
+  else
+  {
   print "upload:" . $printFilename . "<BR><BR>\n";
+  }
   if ($filename =~ /${ImageExtensions}$/) {
-    print '<HR><img src="' . $UploadUrl . $filename . '">' . "\n";
+    print '<HR><img src="' . $UploadUrl . $subdir.$filename . '">' . "\n";
   }
   print &GetCommonFooter();
 }
