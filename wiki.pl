@@ -5367,12 +5367,15 @@ sub SaveUpload {
   while (<$uploadFilehandle>) { print UPLOADFILE; }
   close UPLOADFILE;
 
-  print $q->p("The wiki link to your file is:");
+  print $q->p("You may include this image in this wiki page with one of these example links:");
   $printFilename = $filename;
   $printFilename =~ s/ /\%20/g;  # Replace spaces with escaped spaces
   if ($q->param('id'))
   {
-      print $q->pre("image:".$printFilename."\n");
+      print $q->pre("image:".$printFilename."\n".
+                    "image:center::".$printFilename."\n".
+                    "image:right::".$printFilename."\n".
+                    "image:left::".$printFilename."\n");
       print $q->p("This image is associated with the page",
                   &GetPageLink($q->param('id')));
   }
