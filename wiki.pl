@@ -53,6 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
+  $XSearchDisp
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg );
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -172,6 +173,7 @@ $AllUpload    = 0;      # 1 = anyone can upload,   0 = only editor/admins
 $LimitFileUrl = 1;      # 1 = limited use of file: URLs, 0 = no limits
 $MaintTrimRc  = 0;      # 1 = maintain action trims RC, 0 = only maintainrc
 $SearchButton = 0;      # 1 = search button on page, 0 = old behavior
+$XSearchDisp  = 1;      # 1 = extra output on search, 0 = normal search output
 $EditNameLink = 0;      # 1 = edit links use name (CSS), 0 = '?' links
 $UseMetaWiki  = 0;      # 1 = add MetaWiki search links, 0 = no MW links
 $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
@@ -1513,6 +1515,8 @@ sub GetSearchForm {
   } else {  
     $result .= &GetHiddenValue("dosearch", 1);
   }
+  # add a seach help link
+  $result .= " ". &GetPageLink("SearchHelp");
   return $result;
 }
 
@@ -1690,7 +1694,7 @@ sub CommonMarkup {
   if ($doLines) { # 0 = no line-oriented, 1 or 2 = do line-oriented
     # The quote markup patterns avoid overlapping tags (with 5 quotes)
     # by matching the inner quotes for the strong pattern.
-    s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;
+    s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
     s/''(.*?)''/<em>$1<\/em>/g;
     if ($UseHeadings) {
       s/(^|\n)\s*(\=+)\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $3)/geo;
@@ -3536,7 +3540,7 @@ sub DoUpdatePrefs {
     }
     undef $UserData{'stylesheet'};
   } else {
-    $stylesheet =~ s/[">]//g;  # Remove characters that would cause problems
+    $stylesheet =~ s/[\">]//g;  # Remove characters that would cause problems
     $UserData{'stylesheet'} = $stylesheet;
     print T('StyleSheet setting saved.'), '<br>';
   }
@@ -3768,7 +3772,11 @@ sub DoSearch {
   }
   print &GetHeader('', &QuoteHtml(Ts('Search for: %s', $string)), '');
   print '<br>';
-  &PrintPageList(&SearchTitleAndBody($string));
+  if ( $XSearchDisp ) { # managed by config file (?)
+    &PrintSearchResults($string,&SearchTitleAndBody($string)) ;
+  } else {
+    &PrintPageList(&SearchTitleAndBody($string));
+  }
   print &GetCommonFooter();
 }
 
@@ -3780,7 +3788,7 @@ sub DoBackLinks {
   # At this time the backlinks are mostly a renamed search.
   # An initial attempt to match links only failed on subpages and free links.
   # Escape some possibly problematic characters:
-  $string =~ s/([-'().,])/\\$1/g; 
+  $string =~ s/([-\'().,])/\\$1/g; 
   &PrintPageList(&SearchTitleAndBody($string));
   print &GetCommonFooter();
 }
@@ -3793,6 +3801,65 @@ sub PrintPageList {
     print ".... "  if ($pagename =~ m|/|);
     print &GetPageLink($pagename), "<br>\n";
   }
+}
+
+sub PrintSearchResults {
+    my ($searchstring, @results) = @_ ;
+    my $and = T('and');
+    my $or = T('or');
+    my $searchstring = join('|', split(/ +(?:$and|$or) +/, $searchstring));
+    my ($snippetlen, $maxsnippets) = (100, 4) ; #  these seem nice.
+    print $q->h2(Ts('%s pages found:', ($#results + 1)));
+    my $files = 0; #($searchstring =~ /^\^#FILE/); # usually skip files
+    foreach my $name (@results) {
+	OpenPage($name);
+	OpenDefaultText();
+	my $pageText = QuoteHtml($Text{'text'});
+	#  get the page, filter it, remove all tags
+	$pageText =~ s/$FS//g;	# Remove separators (paranoia)
+	$pageText =~ s/[\s]+/ /g;	#  Shrink whitespace
+	$pageText =~ s/([-_=\\*\\.]){10,}/$1$1$1$1$1/g ; # e.g. shrink "----------"
+	my $htmlre = join('|',(@HtmlPairs, 'pre', 'nowiki', 'code'));
+	$pageText =~ s/\<\/?($htmlre)(\s[^<>]+?)?\>//gi;
+	#  entry header
+	print '<p>' . $q->span({-class=>'wikisearchhead'}, GetPageLink($name));
+	if ($files) {
+            $pageText =~ /^#FILE ([^ ]+)/;
+            print $1;
+	} else {
+            print "<div class=wikisearchtext>";
+            # show a snippet from the top of the document
+            my $j = index($pageText, ' ', $snippetlen); # end on word boundary
+            my $t = substr($pageText, 0, $j);
+            $t =~ s/($searchstring)/<strong>\1<\/strong>/gi;
+            print $t, ' ', $q->b('...');
+            $pageText = substr($pageText, $j); # to avoid rematching
+            # search for occurrences of searchstring
+            my $jsnippet = 0 ;
+            while ($jsnippet < $maxsnippets && $pageText =~ m/($searchstring)/i) {
+                $jsnippet++;
+                if (($j = index($pageText, $1)) > -1 ) {
+                    # get substr containing (start of) match, ending on word boundaries
+                    my $start = index($pageText, ' ', $j-($snippetlen/2));
+                    $start = 0 if ($start == -1);
+                    my $end = index($pageText, ' ', $j+($snippetlen/2));
+                    $end = length($pageText ) if ($end == -1);
+                    $t = substr($pageText, $start, $end-$start);
+                    # highlight occurrences and tack on to output stream.
+                    $t =~ s/($searchstring)/<strong>\1<\/strong>/gi;
+                    print $t, ' ', $q->b('...');
+                    # truncate text to avoid rematching the same string.
+                    $pageText = substr($pageText, $end);
+                }
+            }
+	}
+	#  entry trailer
+        print "</div>";
+	print $q->span({-class=>'wikisearchinfo'},
+	  int((length($pageText)/1024)+1) . 'K - ' . T('last updated') . ' '
+	  . TimeToText($Section{ts}) . ' ' . T('by') . ' '
+	  . GetAuthorLink($Section{'host'}, $Section{'username'})), '</p>';
+      }
 }
 
 sub DoLinks {
@@ -4149,23 +4216,34 @@ END_MAIL_CONTENT
 }
 
 sub SearchTitleAndBody {
-  my ($string) = @_;
-  my ($name, $freeName, @found);
-
-  foreach $name (&AllPagesList()) {
-    &OpenPage($name);
-    &OpenDefaultText();
-    if (($Text{'text'} =~ /$string/i) || ($name =~ /$string/i)) {
-      push(@found, $name);
-    } elsif ($FreeLinks && ($name =~ m/_/)) {
-      $freeName = $name;
-      $freeName =~ s/_/ /g;
-      if ($freeName =~ /$string/i) {
-        push(@found, $name);
-      }
+    my $string = shift;
+    my $and = T('and');
+    my $or = T('or');
+    my @strings = split(/ +$and +/, $string);
+    my @found;
+    foreach my $name (AllPagesList()) {
+	OpenPage($name);
+	OpenDefaultText();
+	my $found = 1; # assume found
+	foreach my $str (@strings) {
+            my @temp = split(/ +$or +/, $str);
+            $str = join('|', @temp);
+            if (not ($Text{'text'} =~ /$str/i)) {
+                $found = 0;
+                last;
+            }
+	}
+	if ($found or $name =~ /$string/i) {
+            push(@found, $name);
+	} elsif ($FreeLinks && ($name =~ m/_/)) {
+            my $freeName = $name;
+            $freeName =~ s/_/ /g;
+            if ($freeName =~ /$string/i) {
+                push(@found, $name);
+            }
+	}
     }
-  }
-  return @found;
+    return @found;
 }
 
 sub SearchBody {
