@@ -1951,7 +1951,7 @@ sub ImageAllowed {
   my ($url) = @_;
   my ($site, $imagePrefixes);
 
-  $imagePrefixes = 'http:|https:|ftp:';
+  $imagePrefixes = './uploads|http:|https:|ftp:';
   $imagePrefixes .= '|file:'  if (!$LimitFileUrl);
   return 0  unless ($url =~ /^($imagePrefixes).+\.$ImageExtensions$/);
   return 0  if ($url =~ /"/);      # No HTML-breaking quotes allowed
