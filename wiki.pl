@@ -1525,7 +1525,7 @@ sub GetMinimumFooter {
 }
 
 sub GetFormStart {
-  return $q->startform("POST", "$ScriptName",
+  return $q->startform("POST", "$ScriptName".($SlashLinks ? "/" : ""),
                        "application/x-www-form-urlencoded");
 }
 
