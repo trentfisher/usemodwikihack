@@ -89,7 +89,7 @@ $EditPass    = "";              # Like AdminPass, but for editing only
 $StyleSheet  = "";              # URL for CSS stylesheet (like "/wiki.css")
 $NotFoundPg  = "";              # Page for not-found links ("" for blank pg)
 $EmailFrom   = "Wiki";          # Text for "From: " field of email notes.
-$SendMail    = "/usr/sbin/sendmail";  # Full path to sendmail executable
+$SendMail    = "/usr/lib/sendmail";  # Full path to sendmail executable
 $FooterNote  = "";              # HTML for bottom of every page
 $EditNote    = "";              # HTML notice above buttons on edit page
 $MaxPost     = 1024 * 210;      # Maximum 210K posts (about 200K for pages)
@@ -125,7 +125,7 @@ $FreeLinks   = 1;           # 1 = use [[word]] links, 0 = LinkPattern only
 $WikiLinks   = 1;           # 1 = use LinkPattern,    0 = use [[word]] only
 $AdminDelete = 1;           # 1 = Admin only deletes, 0 = Editor can delete
 $RunCGI      = 1;           # 1 = Run script as CGI,  0 = Load but do not run
-$EmailNotify = 0;           # 1 = use email notices,  0 = no email on changes
+$EmailNotify = 1;           # 1 = use email notices,  0 = no email on changes
 $EmbedWiki   = 0;           # 1 = no headers/footers, 0 = normal wiki pages
 $DeletedPage = 'DeletedPage';   # 0 = disable, 'PageName' = tag to delete page
 $ReplaceFile = 'ReplaceFile';   # 0 = disable, 'PageName' = indicator tag
@@ -3432,9 +3432,9 @@ sub DoEdit {
                                -label=>T('This change is a minor edit.'));
   }
   if ($EmailNotify) {
-    print "&nbsp;&nbsp;&nbsp;" .
-           $q->checkbox(-name=> 'do_email_notify',
-      -label=>Ts('Send email notification that %s has been changed.', $id));
+#    print "&nbsp;&nbsp;&nbsp;" .
+#           $q->checkbox(-name=> 'do_email_notify',
+#      -label=>Ts('Send email notification that %s has been changed.', $id));
   }
   print "<br>";
   if ($EditNote ne '') {
@@ -3774,7 +3774,26 @@ sub UpdatePrefNumber {
 sub DoIndex {
   print &GetHeader('', T('Index of all pages'), '');
   print '<br>';
-  &PrintPageList(&AllPagesList());
+  my @allpages = &AllPagesList();
+  print "<h2>", Ts('%s pages found:', ($#allpages + 1)), "</h2>\n";
+  print "<ol>\n";
+  foreach my $name (@allpages) {
+      OpenPage($name);
+      OpenDefaultText();
+      my $pageText = $Text{'text'};
+
+      # redirect pages are not interesting
+      next if ($pageText =~ /^\#REDIRECT\s+(\S+)/);
+      print "<li>\n";
+      print ".... "  if ($name =~ m|/|);
+      print &GetPageLink($name);
+      if ($pageText =~ /^\#REDIRECT\s+(\S+)/)
+      {
+          print " redirects to ", &GetPageLink($1);
+      }
+      print "</li>\n";
+  }
+  print "</ol>\n";
   print &GetCommonFooter();
 }
 
@@ -4282,7 +4301,7 @@ sub DoPost {
   $user = &GetParam("username", "");
   # If the person doing editing chooses, send out email notification
   if ($EmailNotify) {
-    &EmailNotify($id, $user) if &GetParam("do_email_notify", "") eq 'on';
+    &EmailNotify($id, $user); # if &GetParam("do_email_notify", "") eq 'on';
   }
   if (&GetParam("recent_edit", "") eq 'on') {
     $isEdit = 1;
@@ -4384,6 +4403,7 @@ sub EmailNotify {
     $address = join ",", <EMAIL>;
     $address =~ s/\n//g;
     close(EMAIL);
+
     my $home_url = $q->url();
     my $page_url = $home_url . "?$id";
     my $editors_summary = $q->param("summary");
