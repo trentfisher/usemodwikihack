@@ -1312,7 +1312,13 @@ sub GetHeader {
     $result .= $q->h1($header . $title);
   }
   if (&GetParam("toplinkbar", 1)) {
-    $result .= &GetGotoBar($id) . "<hr class=wikilineheader>";
+    $result .= '<div class=wikiheaderlinkbar>';
+    # get rid of the classes from link bar, should inherit from div
+    my $linkbar = &GetGotoBar($id);
+    $linkbar =~ s/\s+class=\w+//g;  # remove classes
+    $linkbar =~ s/<a (.*?)>/<a $1 class=wikiheaderlink>/g;
+    $result .= $linkbar . "<hr class=wikilineheader>";
+    $result .= '</div>';
   }
   $result .= '</div>';
   return $result;
@@ -1717,11 +1723,11 @@ sub WikiLinesToHtml {
       $code = "OL";
       $depth = length $1;
     } elsif ($TableSyntax &&
-             s/^((\|\|)+)(.*)\|\|\s*$/"<TR VALIGN='CENTER' "
-                                      . "ALIGN='CENTER'><TD colspan='"
+             s/^((\|\|)+)(.*)\|\|\s*$/"<TR"
+                                      . "><TD colspan='"
                                . (length($1)\/2) . "'>$3<\/TD><\/TR>\n"/e) {
       $code = 'TABLE';
-      $codeAttributes = "BORDER='1'";
+      $codeAttributes = "class=wikitable";
       $TableMode = 1;
       $depth = 1;
     } elsif (/^[ \t].*\S/) {
