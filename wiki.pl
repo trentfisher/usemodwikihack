@@ -1224,10 +1224,10 @@ sub CommonMarkup {
     s/$RFCPattern/&StoreRFC($1)/geo;
     s/$ISBNPattern/&StoreISBN($1)/geo;
     if ($ThinLine) {
-      s/----+/<hr noshade size=1>/g;
-      s/====+/<hr noshade size=2>/g;
+      s/^----+/<hr noshade size=1>/g;
+      s/^====+/<hr noshade size=2>/g;
     } else {
-      s/----+/<hr>/g;
+      s/^----+/<hr>/g;
     }
   }
   if ($doLines) { # 0 = no line-oriented, 1 or 2 = do line-oriented
