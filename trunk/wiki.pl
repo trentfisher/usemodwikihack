@@ -1338,7 +1338,7 @@ sub GetHeader {
     {
       $logoImage .= " align=\"left\"";
     }
-    $helpImage .= "img src=\"$LogoUrl\" alt=\"Help\" border=0 align=\"right\"";
+    $helpImage = "img src=\"$LogoUrl\" alt=\"Help\" border=0 align=\"right\"";
     $result .= &ScriptLink($HomePage, "<$logoImage>")."\n";
 #    $result .= &ScriptLink($HomePage, "<$helpImage>")."\n";
   }
