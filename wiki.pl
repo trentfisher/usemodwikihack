@@ -54,7 +54,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
   $XSearchDisp $TopSearchBox
-  $EditNameLink $UseMetaWiki @ImageSites $BracketImg );
+  $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
 use vars qw(%Page %Section %Text %InterSite %SaveUrl %SaveNumUrl
