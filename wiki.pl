@@ -193,7 +193,7 @@ $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
 # so they are *not* particularly "safe".
 # Tags that must be in <tag> ... </tag> pairs:
 @HtmlPairs = qw(b i u font big small sub sup h1 h2 h3 h4 h5 h6 cite code
-  em s strike strong tt var div center blockquote ol ul dl table caption);
+  em s strike strong tt var div center blockquote ol ul dl table caption marquee);
 # Single tags (that do not require a closing /tag)
 @HtmlSingle = qw(br p hr li dt dd tr td th);
 @HtmlPairs = (@HtmlPairs, @HtmlSingle);  # All singles can also be pairs
@@ -410,6 +410,7 @@ $BrowseCode = ""; # Comment next line to always compile (slower)
 #$BrowseCode = <<'#END_OF_BROWSE_CODE';
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
+use Cwd;
 
 sub InitRequest {
   my @ScriptPath = split('/', "$ENV{SCRIPT_NAME}");
@@ -1713,6 +1714,7 @@ sub CommonMarkup {
                                                $2, $3)/geos if $NamedAnchors;
       }
     }
+
     s/\[$UrlPattern\]/&StoreBracketUrl($1, "", 0)/geo;
     s/\[$InterLinkPattern\]/&StoreBracketInterPage($1, "", 0)/geo;
     s/\b$UrlPattern/&StoreUrl($1, $useImage)/geo;
@@ -1735,6 +1737,7 @@ sub CommonMarkup {
       # around an image (twice for IE bugs)
       s(\b[Ii]mage:break\b)(<br clear=all><BR clear=all>)go;
     }
+
     if ($ThinLine) {
       if ($OldThinLine) {  # Backwards compatible, conflicts with headers
         s/^====+/<hr noshade class=wikiline size=2>/g;
@@ -1746,6 +1749,10 @@ sub CommonMarkup {
       s/^----+/<hr class=wikiline>/g;
     }
   }
+
+  # include extension
+  s/\binclude:([\w\.-]+)/&StoreInclude($1)/geo;
+
   if ($doLines) { # 0 = no line-oriented, 1 or 2 = do line-oriented
     # The quote markup patterns avoid overlapping tags (with 5 quotes)
     # by matching the inner quotes for the strong pattern.
@@ -1979,6 +1986,31 @@ sub StoreUrl {
   # Next line ensures no empty links are stored
   $link = &StoreRaw($link)  if ($link ne "");
   return $link . $extra;
+}
+
+# deal with include/plugin "links"
+sub StoreInclude
+{
+    my $name = shift;
+    my @out;
+
+    if ($name =~ /\.pl/)
+    {
+        my $savedir = cwd();
+        chdir $DataDir ||
+            warn "Error: chdir $DataDir failed (should not happen)";
+        @out = eval { do "$DataDir/plugin/$name"; };
+        chdir $savedir ||
+            warn "Error: chdir $savedir failed (should not happen)";
+    }
+    else
+    {
+        @out = ReadFile("$DataDir/plugin/$name");
+        shift @out; # ignore status
+    }
+
+    # format what we get back as WIKI
+    return CommonMarkup(QuoteHtml(join("\n", @out)));
 }
 
 # from CWICK... with much hacking by trent
