@@ -54,7 +54,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
   $XSearchDisp $TopSearchBox
-  $EditNameLink $UseMetaWiki @ImageSites $BracketImg );
+  $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
 use vars qw(%Page %Section %Text %InterSite %SaveUrl %SaveNumUrl
@@ -1338,7 +1338,9 @@ sub GetHeader {
     {
       $logoImage .= " align=\"left\"";
     }
+    #$helpImage = "img src=\"$LogoUrl\" alt=\"Help\" border=0 align=\"right\"";
     $result .= &ScriptLink($HomePage, "<$logoImage>")."\n";
+    #$result .= "<a href=\"http://www.usemod.com/cgi-bin/wiki.pl\"><img src=\"/dmginternal/siebel-logo.gif\" alt=\"Help\" border=0 align=\"right\"></a>";
   }
   # force a search form at the top of the page
   if ($TopSearchBox)
