@@ -1338,9 +1338,9 @@ sub GetHeader {
     {
       $logoImage .= " align=\"left\"";
     }
-    $helpImage .= "img src=\"$LogoUrl\" alt=\"$altText\" border=0 align=\"right\"";
+    $helpImage .= "img src=\"$LogoUrl\" alt=\"Help\" border=0 align=\"right\"";
     $result .= &ScriptLink($HomePage, "<$logoImage>")."\n";
-    $result .= &ScriptLink($HomePage, "<$helpImage>")."\n";
+#    $result .= &ScriptLink($HomePage, "<$helpImage>")."\n";
   }
   # force a search form at the top of the page
   if ($TopSearchBox)
