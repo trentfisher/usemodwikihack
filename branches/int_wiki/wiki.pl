@@ -1209,7 +1209,9 @@ sub CommonMarkup {
       s/\[$UrlPattern\s+([^\]]+?)\]/&StoreBracketUrl($1, $2)/geos;
       s/\[$InterLinkPattern\s+([^\]]+?)\]/&StoreBracketInterPage($1, $2)/geos;
       if ($WikiLinks && $BracketWiki) {  # Local bracket-links
-        s/\[$LinkPattern\s+([^\]]+?)\]/&StoreBracketLink($1, $2)/geos;
+         s/\[$LinkPattern\s+([^\]]+?)\]/&StorePageOrEditLink($1, $2)/geos;
+# changed to above so that links to unknown pages would show up right -- taf
+#        s/\[$LinkPattern\s+([^\]]+?)\]/&StoreBracketLink($1, $2)/geos;
       }
     }
     s/\[$UrlPattern\]/&StoreBracketUrl($1, "")/geo;
