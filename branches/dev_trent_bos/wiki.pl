@@ -1643,7 +1643,8 @@ sub WikiToHTML {
         s/\&lt;pre\&gt;((.|\n)*?)\&lt;\/pre\&gt;/&StorePre($1, "pre")/ige;
     $pageText =~
         s/\&lt;code\&gt;((.|\n)*?)\&lt;\/code\&gt;/&StorePre($1, "code")/ige;
-    $pageText =~ s/((.|\n)+?\n)\s*\n/&ParseParagraph($1)/geo;
+    $pageText =~ s/((.|\n)+?\n)\s*\n/&ParseParagraph($1)/geo or
+        $pageText =~ s/((.|\n)+?\n)\s*$/&ParseParagraph($1)/geo;
     $pageText =~ s/(.*)<\/p>(.+)$/$1.&ParseParagraph($2)/seo;
   } else {
     $pageText = &CommonMarkup($pageText, 1, 0);   # Multi-line markup
@@ -5217,14 +5218,18 @@ sub SaveUpload {
   $UploadUrl .= '/'  if (substr($UploadUrl, -1, 1) ne '/');  # End with /
   $filename = $q->param('file');
   $filename =~ s/.*[\/\\](.*)/$1/;  # Only name after last \ or /
+
+  # make sure the directory exists
+  &CreateDir($UploadDir);
+
   # if it's a per-page upload, prepend dirs
   my $subdir = "";
   if (my $id = $q->param('id'))
   {
       my $first = substr($id, 0, 1);
       $subdir = "$first/$id/";
-      mkdir($UploadDir.$first, 0777) unless -d $UploadDir.$first;
-      mkdir($UploadDir.$subdir, 0777) unless -d $UploadDir.$subdir;
+      &CreateDir($UploadDir.$first);
+      &CreateDir($UploadDir.$subdir);
   }
 
   $uploadFilehandle = $q->upload('file');
