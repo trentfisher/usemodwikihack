@@ -1304,13 +1304,17 @@ sub GetHeader {
     if (!$LogoLeft) {
       $logoImage .= " align=\"right\"";
     }
-    $header = &ScriptLink($HomePage, "<$logoImage>");
+    $result .= "\n  ". &ScriptLink($HomePage, "<$logoImage>")."\n";
   }
   if ($id ne '') {
-    $result .= $q->h1($header . &GetBackLinksSearchLink($id));
+    # force link to be in the right css class
+    my $link = &GetBackLinksSearchLink($id);
+    $link =~ s/<a (.*?)>/<a $1 class=wikiheader>/g;
+    $result .= "  ".$q->h1({class => "wikiheader"}, $link);
   } else {
-    $result .= $q->h1($header . $title);
+    $result .= $q->h1({class => "wikiheader"}, $title);
   }
+  $result .= "\n";
   if (&GetParam("toplinkbar", 1)) {
     $result .= '<div class=wikiheaderlinkbar>';
     # get rid of the classes from link bar, should inherit from div
@@ -1692,7 +1696,7 @@ sub CommonMarkup {
       s/(^|\n)\s*(\=+)\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $3)/geo;
     }
     if ($TableMode) {
-      s/((\|\|)+)/"<\/TD><TD COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
+      s/((\|\|)+)/"<\/TD><TD class=wikitable COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
     }
   }
   return $_;
@@ -1723,8 +1727,8 @@ sub WikiLinesToHtml {
       $code = "OL";
       $depth = length $1;
     } elsif ($TableSyntax &&
-             s/^((\|\|)+)(.*)\|\|\s*$/"<TR"
-                                      . "><TD colspan='"
+             s/^((\|\|)+)(.*)\|\|\s*$/"<TR class=wikitable"
+                                      . "><TD class=wikitable colspan='"
                                . (length($1)\/2) . "'>$3<\/TD><\/TR>\n"/e) {
       $code = 'TABLE';
       $codeAttributes = "class=wikitable";
