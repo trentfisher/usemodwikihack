@@ -586,8 +586,9 @@ sub BrowsePage {
   }
   $fullHtml .= '<div class=wikitext>';
   $fullHtml .= &WikiToHTML($Text{'text'});
-  $fullHtml .= '<BR CLEAR=ALL />';  # force end of page past any images
-  $fullHtml .= '<BR CLEAR=ALL />';  # do it twice for IE bugs!
+  # force end of page past any images... both are needed due to IE bugs
+  $fullHtml .= '<br style="clear:both"/>';
+  $fullHtml .= '<p style="clear: both;"></p>';
   $fullHtml .= '</div>';
   if (!&GetParam('embed', $EmbedWiki)) {
     $fullHtml .= "<hr class=wikilinefooter>\n";
@@ -3420,8 +3421,9 @@ sub DoEdit {
     $MainPage = $id;
     $MainPage =~ s|/.*||;  # Only the main page name (remove subpage)
     print &WikiToHTML($oldText) . "<hr class=wikilinefooter>\n";
-    print '<BR CLEAR=ALL />';  # force end of page past any images
-    print '<BR CLEAR=ALL />';  # do it twice for IE bugs!
+    # force end of page past any images, both are needed for IE bugs
+    print '<br style="clear:both"/>';
+    print '<p style="clear: both" />';
     print "<h2>", T('Preview only, not yet saved'), "</h2>\n";
     print '</div>';
   }
