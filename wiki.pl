@@ -4205,6 +4205,32 @@ sub DoPost {
   }
   # Add a newline to the end of the string (if it doesn't have one)
   $string .= "\n"  if (!($string =~ /\n$/));
+  # replace any signature escapes
+  # derived from the patch at
+  # http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/AutoSignature
+  {
+      my $signature = &GetParam("username", "");
+      my $linkedsig = "[[$signature]]";
+      if ( $signature eq "" ) {
+          $signature = "Guest" ;
+          $linkedsig = "''Guest''";
+      }
+      my $datestr = scalar(localtime(time));
+      for ( $string ) {
+          # ~~~~~ date only
+          s[ ^(:*)\s*~~~~~ ][\n$1'''$datestr:''' ]xmg;
+          s[ ~~~~~\s*$     ][ -- $datestr ]xmg;
+          s[ ~~~~~         ][ '''$datestr''' ]xg;
+          # ~~~~ signature and date
+          s[ ^(:*)\s*~~~~ ][\n$1'''$signature $datestr:''' ]xmg;
+          s[ ~~~~\s*$     ][ -- $linkedsig $datestr ]xmg;
+          s[ ~~~~         ][ '''$signature''' $datestr ]xg;
+          # ~~~ signature only
+          s[ ^(:*)\s*~~~ ][\n$1'''$signature:''' ]xmg;
+          s[ ~~~\s*$     ][ -- $linkedsig ]xmg;
+          s[ ~~~         ][ '''$signature''' ]xg;
+      }
+  }
   # Lock before getting old page to prevent races
   # Consider extracting lock section into sub, and eval-wrap it?
   # (A few called routines can die, leaving locks.)
