@@ -2009,6 +2009,7 @@ sub StoreInclude
         shift @out; # ignore status
     }
 
+    return join("\n", @out);
     # format what we get back as WIKI
     return CommonMarkup(QuoteHtml(join("\n", @out)));
 }
