@@ -800,6 +800,7 @@ sub GetRc {
   $headList = '';
   $result = '';
   @outrc = reverse @outrc if ($newtop);
+  my $totals = {};
   foreach $rcline (@outrc) {
     ($ts, $pagename, $summary, $isEdit, $host, $kind, $extraTemp)
       = split(/$FS3/, $rcline);
@@ -833,10 +834,31 @@ sub GetRc {
                          $extra{'id'}, $summary, $isEdit,
                          $pagecount{$pagename}, $extra{'revision'},
                          $tEdit, $tDiff, $tChanges, $all, $rcchangehist);
+      my $author = ($extra{'name'} || $host);
+
+      $totals->{userchg}{$author}++;
+      $totals->{usernew}{$author}++ if $extra{'revision'} == 1;
+      $totals->{chg}++;
+      $totals->{new}++ if $extra{'revision'} == 1;
     }
   }
   if (1 == $rcType) {
     $result .= "</UL>\n"  if ($inlist);  # Close final tag
+    # summary of changes
+    my $c = 'class="wikitable"';
+    $result .= "<table $c>\n";
+    
+    $result .= "<tr $c><th $c colspan=3>Totals by user</th></tr>\n";
+    $result .= "<tr $c><th $c>User</th><th $c>New pages</th><th $c>Changes</th></tr>\n";
+    foreach my $u (sort keys %{$totals->{userchg}})
+    {
+        $result .= sprintf("<tr $c><td $c>%s</td><td $c>%s</td><td $c>%s</td></tr>\n",
+                           $u, $totals->{usernew}{$u} || 0,
+                           $totals->{userchg}{$u} || 0);
+    }
+    $result .= sprintf("<tr $c><th $c>%s</th><td $c>%s</td><td $c>%s</td></tr>\n",
+                       "total", $totals->{new}||0, $totals->{chg}||0);
+    $result .= "</table>\n";
   }
   return ($headList, $result);  # Just ignore headList for HTML
 }
