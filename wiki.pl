@@ -882,6 +882,8 @@ sub GetHtmlRcLine {
   if ($UseDiff && &GetParam("diffrclink", 1)) {
     $link .= &ScriptLinkDiff(4, $pagename, $tDiff, "") . "  ";
   }
+  $link .= (1 == $revision ? "<strong>N</strong> " : "");   # mark new pages
+  $link .= ($isEdit ? "<strong>n</strong>" : "");  # mark minor edits
   $link .= &GetPageLink($pagename);
   $html .= "<li>$link ";
   $html .=  &CalcTime($timestamp) . " $count$edit" . " $sum";
