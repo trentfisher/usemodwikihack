@@ -3659,9 +3659,9 @@ sub DoIndex {
 # patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
 sub DoOrphans {
   print &GetHeader('', &QuoteHtml(T('Orphan Page List')), '');
-  print "<hr><pre>\n\n\n\n\n";  # Extra lines to get below the logo
-  &PrintLinkList(&GetOrphanList());
-  print "</pre>\n";
+  print "<p/>\n";
+  &PrintPageList(&GetOrphanList());
+  print "<p/>\n";
   print &GetCommonFooter();
 }
 
@@ -3901,9 +3901,9 @@ sub PrintSearchResults {
 
 sub DoLinks {
   print &GetHeader('', &QuoteHtml(T('Full Link List')), '');
-  print "<hr><pre>\n\n\n\n\n";  # Extra lines to get below the logo
+  print "<p/><table class=wikitable style=\"background-color: white;\">\n";
   &PrintLinkList(&GetFullLinkList());
-  print "</pre>\n";
+  print "</table>\n";
   print &GetMinimumFooter();
 }
 
@@ -3916,7 +3916,7 @@ sub PrintLinkList {
     $pgExists{$page} = 1;
   }
   $names = &GetParam("names", 1);
-  $editlink = &GetParam("editlink", 0);
+  $editlink = &GetParam("editlink", 1); # always include edit links
   foreach $pagelines (@_) {
     @links = ();
     foreach $page (split(' ', $pagelines)) {
@@ -3938,10 +3938,18 @@ sub PrintLinkList {
       }
       push(@links, $link);
     }
-    if (!$names) {
-      shift(@links);
+    # print this out as a table
+    my $name = shift(@links);
+    if ($names)
+    {
+        print $q->Tr($q->td({class => "wikitable"},
+                            [$name,
+                             join(' ', @links)])),"\n";
     }
-    print join(' ', @links), "\n";
+    else
+    {
+        print $q->Tr($q->td([join(' ', @links)])),"\n";
+    }
   }
 }
 
