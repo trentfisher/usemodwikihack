@@ -587,6 +587,7 @@ sub BrowsePage {
   $fullHtml .= '<div class=wikitext>';
   $fullHtml .= &WikiToHTML($Text{'text'});
   $fullHtml .= '<BR CLEAR=ALL />';  # force end of page past any images
+  $fullHtml .= '<BR CLEAR=ALL />';  # do it twice for IE bugs!
   $fullHtml .= '</div>';
   if (!&GetParam('embed', $EmbedWiki)) {
     $fullHtml .= "<hr class=wikilinefooter>\n";
@@ -3420,6 +3421,7 @@ sub DoEdit {
     $MainPage =~ s|/.*||;  # Only the main page name (remove subpage)
     print &WikiToHTML($oldText) . "<hr class=wikilinefooter>\n";
     print '<BR CLEAR=ALL />';  # force end of page past any images
+    print '<BR CLEAR=ALL />';  # do it twice for IE bugs!
     print "<h2>", T('Preview only, not yet saved'), "</h2>\n";
     print '</div>';
   }
@@ -5238,17 +5240,20 @@ sub SaveUpload {
   while (<$uploadFilehandle>) { print UPLOADFILE; }
   close UPLOADFILE;
 
-  print T('The wiki link to your file is:') . "\n<br/><BR/>";
+  print $q->p("The wiki link to your file is:");
   $printFilename = $filename;
   $printFilename =~ s/ /\%20/g;  # Replace spaces with escaped spaces
   if ($q->param('id'))
   {
-      print "image:".$printFilename."<br/>\n";
+      print $q->pre("image:".$printFilename."\n");
+      print $q->p("This image is associated with the page",
+                  &GetPageLink($q->param('id')));
   }
   else
   {
-      print "upload:" . $printFilename . "<BR/><BR/>\n";
+      print $q->pre("upload:" . $printFilename . "\n");
   }
+
   if ($filename =~ /${ImageExtensions}$/) {
     print '<HR><img src="' . $UploadUrl . $subdir.$filename . '">' . "\n";
   }
