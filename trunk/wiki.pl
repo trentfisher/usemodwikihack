@@ -929,7 +929,7 @@ $rssHeader
     <image rdf:about="${\(&QuoteHtml($RssLogoUrl))}">
         <title>${\(&QuoteHtml($SiteName))}</title>
         <url>$RssLogoUrl</url>
-        <link>$QuotedFullUrl</link>
+        <link>SCOTT$QuotedFullUrl</link>
     </image>
 $items
 </rdf:RDF>
