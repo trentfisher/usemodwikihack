@@ -53,7 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
-  $XSearchDisp
+  $XSearchDisp $TopSearchBox
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg );
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -174,6 +174,7 @@ $LimitFileUrl = 1;      # 1 = limited use of file: URLs, 0 = no limits
 $MaintTrimRc  = 0;      # 1 = maintain action trims RC, 0 = only maintainrc
 $SearchButton = 0;      # 1 = search button on page, 0 = old behavior
 $XSearchDisp  = 1;      # 1 = extra output on search, 0 = normal search output
+$TopSearchBox = 1;      # 1 = search box at top right of page, 0 = nothing
 $EditNameLink = 0;      # 1 = edit links use name (CSS), 0 = '?' links
 $UseMetaWiki  = 0;      # 1 = add MetaWiki search links, 0 = no MW links
 $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
@@ -1301,13 +1302,31 @@ sub GetHeader {
     $result .= $q->h3('(' . Ts('redirected from %s', 
                                &GetEditLink($oldId, $oldId)) . ')');
   }
+  # add start of search form, to keep logo and search box on same line
+  if ($TopSearchBox)
+  {
+      $result .= ("<div style=\"text-align: right\">".
+                  $q->startform(-method => "POST"));
+  }
   if ((!$embed) && ($LogoUrl ne "")) {
     $logoImage = "img src=\"$LogoUrl\" alt=\"$altText\" border=0";
     if (!$LogoLeft) {
       $logoImage .= " align=\"right\"";
     }
+    else
+    {
+      $logoImage .= " align=\"left\"";
+    }
     $result .= "\n  ". &ScriptLink($HomePage, "<$logoImage>")."\n";
   }
+  # force a search form at the top of the page
+  if ($TopSearchBox)
+  {
+      $result .= ($q->textfield(-name=>'search', -size=>20).
+                  $q->submit('dosearch', T('search')).
+                  $q->endform . "</div>\n");
+  }
+
   if ($id ne '') {
     # force link to be in the right css class
     my $link = &GetBackLinksSearchLink($id);
