@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl
 # UseModWiki version 1.0 (September 12, 2003)
 # Copyright (C) 2000-2003 Clifford A. Adams  <caadams@usemod.com>
 # Copyright (C) 2002-2003 Sunir Shah  <sunir@sunir.org>
@@ -53,6 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
+  $XSearchDisp $TopSearchBox
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg );
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -65,7 +66,7 @@ use vars qw(%Page %Section %Text %InterSite %SaveUrl %SaveNumUrl
   $ConfigError $UploadPattern );
 
 # == Configuration =====================================================
-$DataDir     = "/tmp/mywikidb"; # Main wiki directory
+$DataDir     = "/vobs/cmweb/htdocs/wiki"; # Main wiki directory
 $UseConfig   = 1;       # 1 = use config file,    0 = do not look for config
 $ConfigFile  = "$DataDir/config";   # Configuration file
 
@@ -172,6 +173,8 @@ $AllUpload    = 0;      # 1 = anyone can upload,   0 = only editor/admins
 $LimitFileUrl = 1;      # 1 = limited use of file: URLs, 0 = no limits
 $MaintTrimRc  = 0;      # 1 = maintain action trims RC, 0 = only maintainrc
 $SearchButton = 0;      # 1 = search button on page, 0 = old behavior
+$XSearchDisp  = 1;      # 1 = extra output on search, 0 = normal search output
+$TopSearchBox = 1;      # 1 = search box at top right of page, 0 = nothing
 $EditNameLink = 0;      # 1 = edit links use name (CSS), 0 = '?' links
 $UseMetaWiki  = 0;      # 1 = add MetaWiki search links, 0 = no MW links
 $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
@@ -1299,20 +1302,48 @@ sub GetHeader {
     $result .= $q->h3('(' . Ts('redirected from %s', 
                                &GetEditLink($oldId, $oldId)) . ')');
   }
+  # add start of search form, to keep logo and search box on same line
+  if ($TopSearchBox)
+  {
+      $result .= ("<div style=\"text-align: right\">".
+                  $q->startform(-method => "POST"));
+  }
   if ((!$embed) && ($LogoUrl ne "")) {
     $logoImage = "img src=\"$LogoUrl\" alt=\"$altText\" border=0";
     if (!$LogoLeft) {
       $logoImage .= " align=\"right\"";
     }
-    $header = &ScriptLink($HomePage, "<$logoImage>");
+    else
+    {
+      $logoImage .= " align=\"left\"";
+    }
+    $result .= "\n  ". &ScriptLink($HomePage, "<$logoImage>")."\n";
   }
+  # force a search form at the top of the page
+  if ($TopSearchBox)
+  {
+      $result .= ($q->textfield(-name=>'search', -size=>20).
+                  $q->submit('dosearch', T('search')).
+                  $q->endform . "</div>\n");
+  }
+
   if ($id ne '') {
-    $result .= $q->h1($header . &GetBackLinksSearchLink($id));
+    # force link to be in the right css class
+    my $link = &GetBackLinksSearchLink($id);
+    $link =~ s/<a (.*?)>/<a $1 class=wikiheader>/g;
+    $result .= "  ".$q->h1({class => "wikiheader"}, $link);
   } else {
-    $result .= $q->h1($header . $title);
+    $result .= $q->h1({class => "wikiheader"}, $title);
   }
+  $result .= "\n";
   if (&GetParam("toplinkbar", 1)) {
-    $result .= &GetGotoBar($id) . "<hr class=wikilineheader>";
+    $result .= '<div class=wikiheaderlinkbar>';
+    # get rid of the classes from link bar, should inherit from div
+    my $linkbar = &GetGotoBar($id);
+    $linkbar =~ s/\s+class=\w+//g;  # remove classes
+    $linkbar =~ s/<a (.*?)>/<a $1 class=wikiheaderlink>/g;
+    $result .= $linkbar . "<hr class=wikilineheader>";
+    $result .= '</div>';
   }
   $result .= '</div>';
   return $result;
@@ -1503,6 +1534,8 @@ sub GetSearchForm {
   } else {  
     $result .= &GetHiddenValue("dosearch", 1);
   }
+  # add a seach help link
+  $result .= " ". &GetPageLink("SearchHelp");
   return $result;
 }
 
@@ -1643,7 +1676,9 @@ sub CommonMarkup {
       s/\[$InterLinkPattern\s+([^\]]+?)\]/&StoreBracketInterPage($1, $2,
                                                              $useImage)/geos;
       if ($WikiLinks && $BracketWiki) {  # Local bracket-links
-        s/\[$LinkPattern\s+([^\]]+?)\]/&StoreBracketLink($1, $2)/geos;
+         s/\[$LinkPattern\s+([^\]]+?)\]/&StorePageOrEditLink($1, $2)/geos;
+# changed to above so that links to unknown pages would show up right -- taf
+#        s/\[$LinkPattern\s+([^\]]+?)\]/&StoreBracketLink($1, $2)/geos;
         s/\[$AnchoredLinkPattern\s+([^\]]+?)\]/&StoreBracketAnchoredLink($1,
                                                $2, $3)/geos if $NamedAnchors;
       }
@@ -1666,25 +1701,25 @@ sub CommonMarkup {
     }
     if ($ThinLine) {
       if ($OldThinLine) {  # Backwards compatible, conflicts with headers
-        s/====+/<hr noshade class=wikiline size=2>/g;
+        s/^====+/<hr noshade class=wikiline size=2>/g;
       } else {             # New behavior--no conflict
-        s/------+/<hr noshade class=wikiline size=2>/g;
+        s/^------+/<hr noshade class=wikiline size=2>/g;
       }
-      s/----+/<hr noshade class=wikiline size=1>/g;
+      s/^----+/<hr noshade class=wikiline size=1>/g;
     } else {
-      s/----+/<hr class=wikiline>/g;
+      s/^----+/<hr class=wikiline>/g;
     }
   }
   if ($doLines) { # 0 = no line-oriented, 1 or 2 = do line-oriented
     # The quote markup patterns avoid overlapping tags (with 5 quotes)
     # by matching the inner quotes for the strong pattern.
-    s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;
+    s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
     s/''(.*?)''/<em>$1<\/em>/g;
     if ($UseHeadings) {
       s/(^|\n)\s*(\=+)\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $3)/geo;
     }
     if ($TableMode) {
-      s/((\|\|)+)/"<\/TD><TD COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
+      s/((\|\|)+)/"<\/TD><TD class=wikitable COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
     }
   }
   return $_;
@@ -1715,11 +1750,11 @@ sub WikiLinesToHtml {
       $code = "OL";
       $depth = length $1;
     } elsif ($TableSyntax &&
-             s/^((\|\|)+)(.*)\|\|\s*$/"<TR VALIGN='CENTER' "
-                                      . "ALIGN='CENTER'><TD colspan='"
+             s/^((\|\|)+)(.*)\|\|\s*$/"<TR class=wikitable"
+                                      . "><TD class=wikitable colspan='"
                                . (length($1)\/2) . "'>$3<\/TD><\/TR>\n"/e) {
       $code = 'TABLE';
-      $codeAttributes = "BORDER='1'";
+      $codeAttributes = "class=wikitable";
       $TableMode = 1;
       $depth = 1;
     } elsif (/^[ \t].*\S/) {
@@ -1939,7 +1974,7 @@ sub ImageAllowed {
   my ($url) = @_;
   my ($site, $imagePrefixes);
 
-  $imagePrefixes = 'http:|https:|ftp:';
+  $imagePrefixes = './uploads|http:|https:|ftp:';
   $imagePrefixes .= '|file:'  if (!$LimitFileUrl);
   return 0  unless ($url =~ /^($imagePrefixes).+\.$ImageExtensions$/);
   return 0  if ($url =~ /"/);      # No HTML-breaking quotes allowed
@@ -3097,6 +3132,9 @@ sub DoOtherRequest {
       &DoIndex();
     } elsif ($action eq "links") {
       &DoLinks();
+    # hacking in orphans patch
+    } elsif ($action eq "orphans") {
+      &DoOrphans();
     } elsif ($action eq "maintain") {
       &DoMaintain();
     } elsif ($action eq "pagelock") {
@@ -3521,7 +3559,7 @@ sub DoUpdatePrefs {
     }
     undef $UserData{'stylesheet'};
   } else {
-    $stylesheet =~ s/[">]//g;  # Remove characters that would cause problems
+    $stylesheet =~ s/[\">]//g;  # Remove characters that would cause problems
     $UserData{'stylesheet'} = $stylesheet;
     print T('StyleSheet setting saved.'), '<br>';
   }
@@ -3597,6 +3635,40 @@ sub DoIndex {
   print '<br>';
   &PrintPageList(&AllPagesList());
   print &GetCommonFooter();
+}
+
+# hacking in
+# patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
+sub DoOrphans {
+  print &GetHeader('', &QuoteHtml(T('Orphan Page List')), '');
+  print "<hr><pre>\n\n\n\n\n";  # Extra lines to get below the logo
+  &PrintLinkList(&GetOrphanList());
+  print "</pre>\n";
+  print &GetCommonFooter();
+}
+
+# patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
+sub GetOrphanList {
+    my @found;
+
+    my %seen = ();
+    my @pglist = &AllPagesList();
+    foreach my $name (@pglist) {
+        $seen{$name} = 0;
+    }
+    # pages linked from menu bar aren't orphans
+    $seen{$HomePage} = 1;
+    $seen{$RCName} = 1;
+    foreach my $name (@pglist) {
+        my @links = &GetPageLinks($name, 1, 0, 0);
+        foreach my $link (@links) {
+            $seen{$link}++ if exists $seen{$link};
+        }
+    }
+    foreach my $name (sort keys %seen) {
+        push(@found, $name) if $seen{$name} < 1;
+    }
+    return @found;
 }
 
 # Create a new user file/cookie pair
@@ -3719,7 +3791,11 @@ sub DoSearch {
   }
   print &GetHeader('', &QuoteHtml(Ts('Search for: %s', $string)), '');
   print '<br>';
-  &PrintPageList(&SearchTitleAndBody($string));
+  if ( $XSearchDisp ) { # managed by config file (?)
+    &PrintSearchResults($string,&SearchTitleAndBody($string)) ;
+  } else {
+    &PrintPageList(&SearchTitleAndBody($string));
+  }
   print &GetCommonFooter();
 }
 
@@ -3731,7 +3807,7 @@ sub DoBackLinks {
   # At this time the backlinks are mostly a renamed search.
   # An initial attempt to match links only failed on subpages and free links.
   # Escape some possibly problematic characters:
-  $string =~ s/([-'().,])/\\$1/g; 
+  $string =~ s/([-\'().,])/\\$1/g; 
   &PrintPageList(&SearchTitleAndBody($string));
   print &GetCommonFooter();
 }
@@ -3744,6 +3820,65 @@ sub PrintPageList {
     print ".... "  if ($pagename =~ m|/|);
     print &GetPageLink($pagename), "<br>\n";
   }
+}
+
+sub PrintSearchResults {
+    my ($searchstring, @results) = @_ ;
+    my $and = T('and');
+    my $or = T('or');
+    my $searchstring = join('|', split(/ +(?:$and|$or) +/, $searchstring));
+    my ($snippetlen, $maxsnippets) = (100, 4) ; #  these seem nice.
+    print $q->h2(Ts('%s pages found:', ($#results + 1)));
+    my $files = 0; #($searchstring =~ /^\^#FILE/); # usually skip files
+    foreach my $name (@results) {
+	OpenPage($name);
+	OpenDefaultText();
+	my $pageText = QuoteHtml($Text{'text'});
+	#  get the page, filter it, remove all tags
+	$pageText =~ s/$FS//g;	# Remove separators (paranoia)
+	$pageText =~ s/[\s]+/ /g;	#  Shrink whitespace
+	$pageText =~ s/([-_=\\*\\.]){10,}/$1$1$1$1$1/g ; # e.g. shrink "----------"
+	my $htmlre = join('|',(@HtmlPairs, 'pre', 'nowiki', 'code'));
+	$pageText =~ s/\<\/?($htmlre)(\s[^<>]+?)?\>//gi;
+	#  entry header
+	print '<p>' . $q->span({-class=>'wikisearchhead'}, GetPageLink($name));
+	if ($files) {
+            $pageText =~ /^#FILE ([^ ]+)/;
+            print $1;
+	} else {
+            print "<div class=wikisearchtext>";
+            # show a snippet from the top of the document
+            my $j = index($pageText, ' ', $snippetlen); # end on word boundary
+            my $t = substr($pageText, 0, $j);
+            $t =~ s/($searchstring)/<strong>\1<\/strong>/gi;
+            print $t, ' ', $q->b('...');
+            $pageText = substr($pageText, $j); # to avoid rematching
+            # search for occurrences of searchstring
+            my $jsnippet = 0 ;
+            while ($jsnippet < $maxsnippets && $pageText =~ m/($searchstring)/i) {
+                $jsnippet++;
+                if (($j = index($pageText, $1)) > -1 ) {
+                    # get substr containing (start of) match, ending on word boundaries
+                    my $start = index($pageText, ' ', $j-($snippetlen/2));
+                    $start = 0 if ($start == -1);
+                    my $end = index($pageText, ' ', $j+($snippetlen/2));
+                    $end = length($pageText ) if ($end == -1);
+                    $t = substr($pageText, $start, $end-$start);
+                    # highlight occurrences and tack on to output stream.
+                    $t =~ s/($searchstring)/<strong>\1<\/strong>/gi;
+                    print $t, ' ', $q->b('...');
+                    # truncate text to avoid rematching the same string.
+                    $pageText = substr($pageText, $end);
+                }
+            }
+	}
+	#  entry trailer
+        print "</div>";
+	print $q->span({-class=>'wikisearchinfo'},
+	  int((length($pageText)/1024)+1) . 'K - ' . T('last updated') . ' '
+	  . TimeToText($Section{ts}) . ' ' . T('by') . ' '
+	  . GetAuthorLink($Section{'host'}, $Section{'username'})), '</p>';
+      }
 }
 
 sub DoLinks {
@@ -4100,23 +4235,34 @@ END_MAIL_CONTENT
 }
 
 sub SearchTitleAndBody {
-  my ($string) = @_;
-  my ($name, $freeName, @found);
-
-  foreach $name (&AllPagesList()) {
-    &OpenPage($name);
-    &OpenDefaultText();
-    if (($Text{'text'} =~ /$string/i) || ($name =~ /$string/i)) {
-      push(@found, $name);
-    } elsif ($FreeLinks && ($name =~ m/_/)) {
-      $freeName = $name;
-      $freeName =~ s/_/ /g;
-      if ($freeName =~ /$string/i) {
-        push(@found, $name);
-      }
+    my $string = shift;
+    my $and = T('and');
+    my $or = T('or');
+    my @strings = split(/ +$and +/, $string);
+    my @found;
+    foreach my $name (AllPagesList()) {
+	OpenPage($name);
+	OpenDefaultText();
+	my $found = 1; # assume found
+	foreach my $str (@strings) {
+            my @temp = split(/ +$or +/, $str);
+            $str = join('|', @temp);
+            if (not ($Text{'text'} =~ /$str/i)) {
+                $found = 0;
+                last;
+            }
+	}
+	if ($found or $name =~ /$string/i) {
+            push(@found, $name);
+	} elsif ($FreeLinks && ($name =~ m/_/)) {
+            my $freeName = $name;
+            $freeName =~ s/_/ /g;
+            if ($freeName =~ /$string/i) {
+                push(@found, $name);
+            }
+	}
     }
-  }
-  return @found;
+    return @found;
 }
 
 sub SearchBody {
