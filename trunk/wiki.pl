@@ -929,7 +929,7 @@ $rssHeader
     <image rdf:about="${\(&QuoteHtml($RssLogoUrl))}">
         <title>${\(&QuoteHtml($SiteName))}</title>
         <url>$RssLogoUrl</url>
-        <link>SCOTT$QuotedFullUrl</link>
+        <link>$QuotedFullUrl</link>
     </image>
 $items
 </rdf:RDF>
@@ -1338,7 +1338,9 @@ sub GetHeader {
     {
       $logoImage .= " align=\"left\"";
     }
+    $helpImage .= "img src=\"$LogoUrl\" alt=\"$altText\" border=0 align=\"right\"";
     $result .= &ScriptLink($HomePage, "<$logoImage>")."\n";
+    $result .= &ScriptLink($HomePage, "<$helpImage>")."\n";
   }
   # force a search form at the top of the page
   if ($TopSearchBox)
