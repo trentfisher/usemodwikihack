@@ -2458,6 +2458,9 @@ sub DoOtherRequest {
       &DoIndex();
     } elsif ($action eq "links") {
       &DoLinks();
+    # hacking in orphans patch
+    } elsif ($action eq "orphans") {
+      &DoOrphans();
     } elsif ($action eq "maintain") {
       &DoMaintain();
     } elsif ($action eq "pagelock") {
@@ -2913,6 +2916,40 @@ sub DoIndex {
   print '<br>';
   &PrintPageList(&AllPagesList());
   print &GetCommonFooter();
+}
+
+# hacking in
+# patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
+sub DoOrphans {
+  print &GetHeader('', &QuoteHtml(T('Orphan Page List')), '');
+  print "<hr><pre>\n\n\n\n\n";  # Extra lines to get below the logo
+  &PrintLinkList(&GetOrphanList());
+  print "</pre>\n";
+  print &GetCommonFooter();
+}
+
+# patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
+sub GetOrphanList {
+    my @found;
+
+    my %seen = ();
+    my @pglist = &AllPagesList();
+    foreach my $name (@pglist) {
+        $seen{$name} = 0;
+    }
+    # pages linked from menu bar aren't orphans
+    $seen{$HomePage} = 1;
+    $seen{$RCName} = 1;
+    foreach my $name (@pglist) {
+        my @links = &GetPageLinks($name, 1, 0, 0);
+        foreach my $link (@links) {
+            $seen{$link}++ if exists $seen{$link};
+        }
+    }
+    foreach my $name (sort keys %seen) {
+        push(@found, $name) if $seen{$name} < 1;
+    }
+    return @found;
 }
 
 # Create a new user file/cookie pair
