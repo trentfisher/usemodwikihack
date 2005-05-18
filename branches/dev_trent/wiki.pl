@@ -2202,10 +2202,28 @@ sub StoreUpload {
 sub UploadLink {
   my ($filename) = @_;
   my ($html, $url);
+  my $id =  $OpenPageName;
  
   return $filename  if ($UploadUrl eq '');  # No bad links if misconfigured
   $UploadUrl .= '/'  if (substr($UploadUrl, -1, 1) ne '/');  # End with /
-  $url = $UploadUrl . $filename;
+  my $leftChar  =  substr( $id, 0, 1 );  # for indexing
+
+  #$url = $UploadUrl . $filename;
+  # locate the file, first see if it's associated with this page
+  if (-f "$UploadDir/$leftChar/$id/$filename")
+  {
+      $url = $UploadUrl."$leftChar/$id/$filename";
+  }
+  elsif (-f "$UploadDir/$filename")
+  {
+      $url = $UploadUrl."$filename";
+  }
+  else
+  {
+      # no such file... provide a link to upload it
+      return &GetUploadLink($id, T('Upload missing file: '.$filename.''));
+  }
+
   $html = '<a href="' . $url . '">';
   if (&ImageAllowed($url)) {
     $html .= '<img src="' . $url . '" alt="upload:' . $filename . '">';
