@@ -1852,7 +1852,14 @@ sub WikiLinesToHtml {
     if (!$ParseParas) {
       s/^\s*$/<p>\n/;                      # Blank lines become <p> tags
     }
-    $pageHtml .= &CommonMarkup($_, 1, 2);  # Line-oriented common markup
+    $_ = &CommonMarkup($_, 1, 2);  # Line-oriented common markup
+    # if we are doing tables, tweak the cells that should be headers
+    if ($TableSyntax)
+    {
+      # doctor up the table cells
+      s(<TD(.*?)>\s*=+\s*(.*?)\s*=+\s*</TD>)(<TH$1>$2</TH>)g;
+    }
+    $pageHtml .= $_;
   }
   while (@htmlStack > 0) {       # Clear stack
     $pageHtml .=  "</" . pop(@htmlStack) . ">\n";
