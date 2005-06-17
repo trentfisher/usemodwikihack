@@ -1815,9 +1815,14 @@ sub WikiLinesToHtml {
     } elsif (s/^(\*+)/<li>/) {
       $code = "UL";
       $depth = length $1;
-    } elsif (s/^(\#+)/<li>/) {
+    # from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/OrderedListNumbering
+    } elsif (s/^(\#+)(\d*)([aAiI]?)/'<li' . ($2 ? " VALUE=\"$2\"" : '') . '>'/e) {
+
       $code = "OL";
       $depth = length $1;
+      if ($3) {
+        $codeAttributes = "TYPE=\"$3\"";
+      }
     } elsif ($TableSyntax &&
              s/^((\|\|)+)(.*)\|\|\s*$/"<TR class=wikitable"
                                       . "><TD class=wikitable colspan='"
