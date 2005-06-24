@@ -1815,9 +1815,14 @@ sub WikiLinesToHtml {
     } elsif (s/^(\*+)/<li>/) {
       $code = "UL";
       $depth = length $1;
-    } elsif (s/^(\#+)/<li>/) {
+    # from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/OrderedListNumbering
+    } elsif (s/^(\#+)(\d*)([aAiI]?)/'<li' . ($2 ? " VALUE=\"$2\"" : '') . '>'/e) {
+
       $code = "OL";
       $depth = length $1;
+      if ($3) {
+        $codeAttributes = "TYPE=\"$3\"";
+      }
     } elsif ($TableSyntax &&
              s/^((\|\|)+)(.*)\|\|\s*$/"<TR class=wikitable"
                                       . "><TD class=wikitable colspan='"
@@ -1852,7 +1857,14 @@ sub WikiLinesToHtml {
     if (!$ParseParas) {
       s/^\s*$/<p>\n/;                      # Blank lines become <p> tags
     }
-    $pageHtml .= &CommonMarkup($_, 1, 2);  # Line-oriented common markup
+    $_ = &CommonMarkup($_, 1, 2);  # Line-oriented common markup
+    # if we are doing tables, tweak the cells that should be headers
+    if ($TableSyntax)
+    {
+      # doctor up the table cells
+      s(<TD(.*?)>\s*=+\s*(.*?)\s*=+\s*</TD>)(<TH$1>$2</TH>)g;
+    }
+    $pageHtml .= $_;
   }
   while (@htmlStack > 0) {       # Clear stack
     $pageHtml .=  "</" . pop(@htmlStack) . ">\n";
@@ -2202,10 +2214,28 @@ sub StoreUpload {
 sub UploadLink {
   my ($filename) = @_;
   my ($html, $url);
+  my $id =  $OpenPageName;
  
   return $filename  if ($UploadUrl eq '');  # No bad links if misconfigured
   $UploadUrl .= '/'  if (substr($UploadUrl, -1, 1) ne '/');  # End with /
-  $url = $UploadUrl . $filename;
+  my $leftChar  =  substr( $id, 0, 1 );  # for indexing
+
+  #$url = $UploadUrl . $filename;
+  # locate the file, first see if it's associated with this page
+  if (-f "$UploadDir/$leftChar/$id/$filename")
+  {
+      $url = $UploadUrl."$leftChar/$id/$filename";
+  }
+  elsif (-f "$UploadDir/$filename")
+  {
+      $url = $UploadUrl."$filename";
+  }
+  else
+  {
+      # no such file... provide a link to upload it
+      return &GetUploadLink($id, T('Upload missing file: '.$filename.''));
+  }
+
   $html = '<a href="' . $url . '">';
   if (&ImageAllowed($url)) {
     $html .= '<img src="' . $url . '" alt="upload:' . $filename . '">';
@@ -5367,12 +5397,15 @@ sub SaveUpload {
   while (<$uploadFilehandle>) { print UPLOADFILE; }
   close UPLOADFILE;
 
-  print $q->p("The wiki link to your file is:");
+  print $q->p("You may include this image in this wiki page with one of these example links:");
   $printFilename = $filename;
   $printFilename =~ s/ /\%20/g;  # Replace spaces with escaped spaces
   if ($q->param('id'))
   {
-      print $q->pre("image:".$printFilename."\n");
+      print $q->pre("image:".$printFilename."\n".
+                    "image:center::".$printFilename."\n".
+                    "image:right::".$printFilename."\n".
+                    "image:left::".$printFilename."\n");
       print $q->p("This image is associated with the page",
                   &GetPageLink($q->param('id')));
   }
