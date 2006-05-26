@@ -1776,8 +1776,8 @@ sub CommonMarkup {
     }
   }
 
-  # include extension
-  s/\binclude:([\w\.-]+)/&StoreInclude($1)/geo;
+  # plugin extension
+  s/{{([\w]+)(.*?)}}/&StorePlugin($1, $2)/geo;
 
   if ($doLines) { # 0 = no line-oriented, 1 or 2 = do line-oriented
     # The quote markup patterns avoid overlapping tags (with 5 quotes)
@@ -2026,30 +2026,51 @@ sub StoreUrl {
   return $link . $extra;
 }
 
-# deal with include/plugin "links"
-sub StoreInclude
+# deal with plugin "links"
+sub StorePlugin
 {
     my $name = shift;
+    my $paramstr = shift;
     my @out;
 
-    if ($name =~ /\.pl/)
+    # parse args
+    my %params = ();
+    while ($paramstr)
     {
+        $paramstr =~ s/^\s+//;
+        if ($paramstr =~ s/(\w+)\s*=\s*\"(.*?)\"// or
+            $paramstr =~ s/(\w+)\s*=\s*\'(.*?)\'// or
+            $paramstr =~ s/(\w+)\s*=\s*(\S+)//)
+        {
+            $params{$1} = $2;
+        }
+        else
+        {
+            # stop processing, gunk in the param line
+            last;
+        }
+    }
+
+    if (-f "$DataDir/plugin/$name.pl")
+    {
+        # set up an isolated namespace so that the plugin doesn't mess us up
+        eval { require "$DataDir/plugin/$name.pl"; };
+        warn "Error: plugin $name load: $@\n" if $@;
         my $savedir = cwd();
         chdir $DataDir ||
             warn "Error: chdir $DataDir failed (should not happen)";
-        @out = eval { do "$DataDir/plugin/$name"; };
+        my $funcref = \&{$name};
+        @out = eval { &$funcref(%params) };
+        warn "Error: plugin $name eval: $@\n" if $@;
         chdir $savedir ||
             warn "Error: chdir $savedir failed (should not happen)";
     }
     else
     {
-        @out = ReadFile("$DataDir/plugin/$name");
-        shift @out; # ignore status
+        return "<em>plugin $name missing</em>";
     }
 
     return join("\n", @out);
-    # format what we get back as WIKI
-    return CommonMarkup(QuoteHtml(join("\n", @out)));
 }
 
 # from CWICK... with much hacking by trent
