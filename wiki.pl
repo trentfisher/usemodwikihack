@@ -1692,6 +1692,9 @@ sub CommonMarkup {
   my ($text, $useImage, $doLines) = @_;
   local $_ = $text;
 
+  # plugin extension... do this before any markup!
+  s/{{([\w]+)(.*?)}}/&StorePlugin($1, $2)/geo;
+
   if ($doLines < 2) { # 2 = do line-oriented only
     # The <nowiki> tag stores text with no markup (except quoting HTML)
     s/\&lt;nowiki\&gt;((.|\n)*?)\&lt;\/nowiki\&gt;/&StoreRaw($1)/ige;
@@ -1775,9 +1778,6 @@ sub CommonMarkup {
       s/^----+/<hr class=wikiline>/g;
     }
   }
-
-  # plugin extension
-  s/{{([\w]+)(.*?)}}/&StorePlugin($1, $2)/geo;
 
   if ($doLines) { # 0 = no line-oriented, 1 or 2 = do line-oriented
     # The quote markup patterns avoid overlapping tags (with 5 quotes)
@@ -2038,11 +2038,21 @@ sub StorePlugin
     while ($paramstr)
     {
         $paramstr =~ s/^\s+//;
+        # param=value
         if ($paramstr =~ s/(\w+)\s*=\s*\"(.*?)\"// or
             $paramstr =~ s/(\w+)\s*=\s*\'(.*?)\'// or
             $paramstr =~ s/(\w+)\s*=\s*(\S+)//)
         {
             $params{$1} = $2;
+        }
+        # value... pick a numbered key
+        elsif ($paramstr =~ s/\"(.*?)\"// or
+               $paramstr =~ s/\'(.*?)\'// or
+               $paramstr =~ s/(\S+)//)
+        {
+            my $k = 0;
+            $k++ while (exists $params{$k});
+            $params{$k} = $1;
         }
         else
         {
@@ -2070,7 +2080,7 @@ sub StorePlugin
         return "<em>plugin $name missing</em>";
     }
 
-    return join("\n", @out);
+    return &StoreRaw(join("\n", @out));
 }
 
 # from CWICK... with much hacking by trent
