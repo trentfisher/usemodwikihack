@@ -53,7 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
-  $XSearchDisp $TopSearchBox $EditHelp
+  $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -138,6 +138,7 @@ $UseUpload   = 0;           # 1 = allow uploads,      0 = no uploads
 $LogoLeft     = 0;      # 1 = logo on left,       0 = logo on right
 $RecentTop    = 1;      # 1 = recent on top,      0 = recent on bottom
 $UseDiffLog   = 1;      # 1 = save diffs to log,  0 = do not save diffs
+$MetaNoIndexHist  = 0;      # 1 = Disallow robots indexing old pages, 0 = Allow robots to index old pages
 $KeepMajor    = 1;      # 1 = keep major rev,     0 = expire all revisions
 $KeepAuthor   = 1;      # 1 = keep author rev,    0 = expire all revisions
 $ShowEdits    = 0;      # 1 = show minor edits,   0 = hide edits by default
@@ -1445,6 +1446,17 @@ sub GetHtmlHeader {
       $keywords =~ s/([a-z])([A-Z])/$1, $2/g;
       $html .= "<META NAME='KEYWORDS' CONTENT='$keywords'/>\n" if $keywords;
   }
+
+  # if we don't want robots indexing our history pages
+  if ($MetaNoIndexHist) {
+       if (($action eq "browse" && $revision ne '') || # looking at a diff
+               ($action eq "browse" && $diff ne '') || # looking at a diff
+               ($action eq "history" ) ) {                                     # looking at history page
+
+               $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>";
+       }
+  }
+
   if ($SiteBase ne "") {
     $html .= qq(<BASE HREF="$SiteBase">\n);
   }
