@@ -53,7 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
-  $XSearchDisp $TopSearchBox
+  $XSearchDisp $TopSearchBox $EditHelp
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -2063,12 +2063,11 @@ sub StorePlugin
 
     if (-f "$DataDir/plugin/$name.pl")
     {
-        # set up an isolated namespace so that the plugin doesn't mess us up
-        eval { require "$DataDir/plugin/$name.pl"; };
-        warn "Error: plugin $name load: $@\n" if $@;
         my $savedir = cwd();
         chdir $DataDir ||
             warn "Error: chdir $DataDir failed (should not happen)";
+        eval { require "$DataDir/plugin/$name.pl"; };
+        warn "Error: plugin $name load: $@\n" if $@;
         my $funcref = \&{$name};
         @out = eval { &$funcref(%params) };
         warn "Error: plugin $name eval: $@\n" if $@;
@@ -3503,6 +3502,8 @@ sub DoEdit {
   if ($revision ne "") {
     print &GetHiddenValue("revision", $revision), "\n";
   }
+  # print an editor helper
+  print &$EditHelp($id) if ref $EditHelp eq "CODE";
   print &GetTextArea('text', $oldText, $editRows, $editCols);
   $summary = &GetParam("summary", "*");
   print "<p>", T('Summary:'),
