@@ -1449,12 +1449,16 @@ sub GetHtmlHeader {
 
   # if we don't want robots indexing our history pages
   if ($MetaNoIndexHist) {
-       if (($action eq "browse" && $revision ne '') || # looking at a diff
-               ($action eq "browse" && $diff ne '') || # looking at a diff
-               ($action eq "history" ) ) {                                     # looking at history page
+      my $action = lc(&GetParam('action', ''));
+      my $revision = lc(&GetParam('revision', ''));
+      my $diff = lc(&GetParam('diff', ''));
 
-               $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>";
-       }
+      if (($action eq "browse" && $revision ne '') || # looking at a diff
+          ($action eq "browse" && $diff ne '') ||     # looking at a diff
+          ($action eq "history" ))                    # looking at history page
+      {
+          $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>";
+      }
   }
 
   if ($SiteBase ne "") {
