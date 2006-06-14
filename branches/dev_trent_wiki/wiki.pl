@@ -2966,6 +2966,21 @@ sub UserIsBanned {
   return 0;
 }
 
+# content banning from
+# http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BannedContent
+sub ContentIsBanned {
+    my ($content) = @_;
+    my ($data, $status);
+    ($status, $data) = &ReadFile("$DataDir/spamlist");
+    return 0  if (!$status);            # no file exists, so no ban
+    $data =~ s/\r//g;                   # remove \r from end of lines
+    foreach (split(/\n/, $data)) {
+        next if ((/^\s*$/) || (/^\#/));   # Skip empty, spaces, or comments
+        return 1  if ($content =~ /$_/i); # return true, content is banned
+    }
+    return 0;                           # return false, content is not banned
+}
+
 sub UserIsAdmin {
   my (@pwlist, $userPassword);
 
@@ -3377,6 +3392,8 @@ sub DoOtherRequest {
       &DoEditPrefs();
     } elsif ($action eq "editbanned") {
       &DoEditBanned();
+    } elsif ($action eq "editspam") {
+      &DoEditSpam();
     } elsif ($action eq "editlinks") {
       &DoEditLinks();
     } elsif ($action eq "login") {
@@ -3409,6 +3426,10 @@ sub DoOtherRequest {
   }
   if (&GetParam("edit_ban", 0)) {
     &DoUpdateBanned();
+    return;
+  }
+  if (&GetParam("edit_spam", 0)) {
+    &DoUpdateSpam();
     return;
   }
   if (&GetParam("enter_login", 0)) {
@@ -4311,6 +4332,12 @@ sub DoPost {
     &ReportError(Ts('Editing not allowed for %s.', $id));
     return;
   }
+
+  if (&ContentIsBanned($string)) {
+    # This is an internal interface--we don't need to explain
+    &ReportError(Ts('Editing not allowed for %s.', $id));
+    return;
+  }
   if (($id eq   'SampleUndefinedPage')    ||
       ($id eq T('SampleUndefinedPage'))   ||
       ($id eq   'Sample_Undefined_Page')  ||
@@ -4893,6 +4920,49 @@ sub DoUpdateBanned {
   print &GetCommonFooter();
 }
 
+#------------------------------------------------------------------------
+# content banning from
+# http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BannedContent
+sub DoEditSpam {
+    my ($spamList, $status);
+  
+    print &GetHeader("", "Editing Spam List", "");
+    return  if (!&UserIsAdminOrError());
+    ($status, $spamList) = &ReadFile("$DataDir/spamlist");
+    $spamList = ""  if (!$status);
+    print &GetFormStart();
+    print GetHiddenValue("edit_spam", 1), "\n";
+    print "<b>Banned content list:</b><br>\n";
+    print "<p>Each entry is either a commented line (starting with #), ",
+      "or a Perl regular expression";
+    print &GetTextArea('spamlist', $spamList, 20, 50);
+    print "<br>", $q->submit(-name=>'Save'), "\n";
+    print "<hr>\n";
+    print $q->endform;
+    print &GetCommonFooter("");
+    print &GetMinimumFooter();
+}
+  
+sub DoUpdateSpam {
+    my ($newList, $fname);
+  
+    print &GetHeader("", "Updating spam list", "");
+    return  if (!&UserIsAdminOrError());
+    $fname = "$DataDir/spamlist";
+    $newList = &GetParam("spamlist", "#Empty file");
+    if ($newList eq "") {
+        print "<p>Empty spam list or error.";
+        print "<p>Resubmit with at least one space character to remove.";
+    } elsif ($newList =~ /^\s*$/s) {
+        unlink($fname);
+        print "<p>Removed spam list";
+    } else {
+        &WriteStringToFile($fname, $newList);
+        print "<p>Updated spam list";
+    }
+    print &GetCommonFooter();
+  }
+
 # ==== Editing/Deleting pages and links ====
 sub DoEditLinks {
   print &GetHeader("", "Editing Links", "");
@@ -5302,7 +5372,9 @@ sub GetAdminBar {
     $result .= &GetPageLockLink($id, 1, T('Lock page'));
   }
   $result .= " | " . &GetDeleteLink($id, T('Delete this page'), 0);
-  $result .= " | " . &ScriptLink("action=editbanned", T("Edit Banned List"));
+  $result .= " | " . &ScriptLink("action=editbanned", T("Edit Banned Hosts"));
+  $result .= " | " . &ScriptLink("action=editspam",
+                                 T("Edit Banned Content"));
   $result .= " | " . &ScriptLink("action=maintain", T("Run Maintenance"));
   $result .= " | " . &ScriptLink("action=editlinks", T("Edit/Rename pages")); 
   if (-f "$DataDir/noedit") {
