@@ -53,6 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
+  $SpambotPoison @SpambotDatafiles
   $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
@@ -179,6 +180,9 @@ $TopSearchBox = 1;      # 1 = search box at top right of page, 0 = nothing
 $EditNameLink = 0;      # 1 = edit links use name (CSS), 0 = '?' links
 $UseMetaWiki  = 0;      # 1 = add MetaWiki search links, 0 = no MW links
 $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
+$SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
+@SpambotDatafiles = (); # files containing lists of email addresses, usernames
+                        # and domain names, respectively
 
 # Names of sites.  (The first entry is used for the number link.)
 @IsbnNames = ('bn.com', 'amazon.com', 'search');
@@ -1546,8 +1550,84 @@ sub GetFooterText {
     $result .= T($FooterNote);
   }
   $result .= '</div>';
+  $result .= &GetSpambotPoison() if $SpambotPoison;
   $result .= &GetMinimumFooter();
   return $result;
+}
+
+# generate a fake guestbook with generated email addresses
+# to poison spammers email lists
+sub GetSpambotPoison {
+  my $num_addresses = 2 + int (rand 16);
+  my @randaddr = ReadRandomLines($SpambotDatafiles[0], $num_addresses);
+  my @randuser = ReadRandomLines($SpambotDatafiles[1], $num_addresses*2);
+  my @randhost = ReadRandomLines($SpambotDatafiles[2], $num_addresses);
+
+  my $result = "\n<div id=guestbook><h1>Guestbook</h1>\n";
+  for (1..$num_addresses) {
+    my $email_addr;
+    my $addrtype = int(rand(5));
+    # verbatim address
+    if ($addrtype == 0 and @randaddr) {
+        $email_addr = pop(@randaddr);
+    }
+    # user@host
+    elsif ($addrtype == 1 and @randuser and @randhost) {
+        $email_addr = pop(@randuser).'@'.pop(@randhost);
+    }
+    # userN@host
+    elsif ($addrtype == 2 and @randuser and @randhost) {
+        $email_addr = pop(@randuser).int(rand(9999)).'@'.pop(@randhost);
+    }
+    # user.user@host
+    elsif ($addrtype == 3 and @randuser and @randhost) {
+        $email_addr = pop(@randuser).'.'.pop(@randuser).'@'.pop(@randhost);
+    }
+    # useruser@host
+    elsif ($addrtype == 4 and @randuser and @randhost) {
+        $email_addr = pop(@randuser).pop(@randuser).'@'.pop(@randhost);
+    }
+    # useruserN@host
+    elsif ($addrtype == 5 and @randuser and @randhost) {
+        $email_addr = pop(@randuser).pop(@randuser).int(rand(9999)).
+                      '@'.pop(@randhost);
+    }
+    else {
+        # this shouldn't happen
+        next;
+    }
+
+    $result .= "<A HREF=\"mailto:$email_addr\">$email_addr</A><BR/>\n";
+  }
+  $result .= "</div>\n";
+  return $result;
+}
+
+# get 'n' random lines from a given file
+sub ReadRandomLines {
+    my $file = shift;
+    my $wanted = shift;
+
+    my $fsize = (stat($file))[7];
+    unless (open(F, $file))
+    {
+        warn "Error: cannot read $file: $!\n";
+        return ();
+    }
+    my @ret;
+    foreach my $i (1..$wanted)
+    {
+        my $pos = int(rand($fsize-5));
+        $pos = 0 if $pos < 0;
+        seek(F, $pos, 0);
+        my $j;
+        $j = <F> if $pos != 0;  # discard partial line
+        $j = <F>;
+        redo if not $j; # this indicates we hit eof
+        chomp $j;
+        push @ret, $j;
+    }
+    return @ret;
 }
 
 sub GetCommonFooter {
