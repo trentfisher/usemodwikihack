@@ -588,8 +588,9 @@ sub BrowsePage {
     &OpenKeptRevisions('text_default')  if (!$openKept);
     $fullHtml .= &GetDiffHTML($showDiff, $id, $diffRevision,
                               $revision, $newText);
-    $fullHtml .= "<hr class=wikilinediff>\n";
+    $fullHtml .= "<hr class=wikilinediff>";
   }
+  $fullHtml .= "\n";
   $fullHtml .= '<div class=wikitext>';
   $fullHtml .= &WikiToHTML($Text{'text'});
   # force end of page past any images... both are needed due to IE bugs
@@ -1388,10 +1389,8 @@ sub GetHeader {
                             ' (' . Ts('redirected from %s', $l . ')'));
   }
   if ($id ne '') {
-    # force link to be in the right css class
-    my $link = &GetBackLinksSearchLink($id);
-    $link =~ s/<a (.*?)>/<a $1 class=wikiheader>/g;
-    $result .= "  ".$q->h1({class => "wikiheader"}, $link.$redirtext);
+    $result .= "  ".$q->h1({class => "wikiheader"},
+                           &GetBackLinksSearchLink($id).$redirtext);
   } else {
     # this is for built-in pages (no backlinks)
     $result .= $q->h1({class => "wikiheader"}, $title);
@@ -1399,11 +1398,7 @@ sub GetHeader {
   $result .= "\n";
   if (&GetParam("toplinkbar", 1)) {
     $result .= '<div class=wikiheaderlinkbar>';
-    # get rid of the classes from link bar, should inherit from div
-    my $linkbar = &GetGotoBar($id);
-    $linkbar =~ s/\s+class=\w+//g;  # remove classes
-    $linkbar =~ s/<a (.*?)>/<a $1 class=wikiheaderlink>/g;
-    $result .= $linkbar . "<hr class=wikilineheader>";
+    $result .= &GetGotoBar($id) . "<hr class=wikilineheader>";
     $result .= '</div>';
   }
   $result .= '</div>';
@@ -1777,7 +1772,7 @@ sub WikiToHTML {
     pop @HeadingNumbers;
     $TableOfContents .= "</dd></dl>\n\n";
   }
-  $pageText =~ s/&lt;toc&gt;/$TableOfContents/gi;
+  $pageText =~ s/&lt;toc&gt;/<div class=toc><b>Table of Contents<\/b>$TableOfContents<\/div>/gi;
   if ($LateRules ne '') {
     $pageText = &EvalLocalRules($LateRules, $pageText, 0);
   }
@@ -1881,12 +1876,13 @@ sub CommonMarkup {
     s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
     s/''(.*?)''/<em>$1<\/em>/g;
     if ($UseHeadings) {
-      s/(^|\n)\s*(\=+)\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $3)/geo;
+      s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
     }
     if ($TableMode) {
       s/((\|\|)+)/"<\/TD><TD class=wikitable COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
     }
   }
+
   return $_;
 }
 
@@ -2440,7 +2436,7 @@ sub StripUrlPunct {
 }
 
 sub WikiHeadingNumber {
-    my ($depth, $text) = @_;
+    my ($depth, $text, $useNumber) = @_;
     my ($anchor, $number);
 
     return '' unless --$depth > 0;  # Don't number H1s because it looks stupid
@@ -2473,15 +2469,23 @@ sub WikiHeadingNumber {
     $anchor = '_' . (join '_', @HeadingNumbers) unless $anchor;
     $TableOfContents .= $number . &ScriptLink("$OpenPageName#$anchor",$text)
                         . "</dd>\n<dt> </dt><dd>";
-    return &StoreHref(" name=\"$anchor\"") . $number;
+    if ($useNumber) {
+      return &StoreHref(" name=\"$anchor\"") . $number;
+    } else {
+      return &StoreHref(" name=\"$anchor\"");
+    }
 }
 
 sub WikiHeading {
-  my ($pre, $depth, $text) = @_;
+  my ($pre, $depth, $text, $useNumber) = @_;
 
   $depth = length($depth);
   $depth = 6  if ($depth > 6);
-  $text =~ s/^\s*#\s+/&WikiHeadingNumber($depth,$')/e; # $' == $POSTMATCH
+  if ($useNumber) {
+    $text = &WikiHeadingNumber($depth,$text, 1) . $text;
+  } else {
+    $text = &WikiHeadingNumber($depth,$text, 0) . $text;
+  }
   return $pre . "<H$depth>$text</H$depth>\n";
 }
 
