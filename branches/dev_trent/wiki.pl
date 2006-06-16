@@ -1681,7 +1681,7 @@ sub WikiToHTML {
     pop @HeadingNumbers;
     $TableOfContents .= "</dd></dl>\n\n";
   }
-  $pageText =~ s/&lt;toc&gt;/$TableOfContents/gi;
+  $pageText =~ s/&lt;toc&gt;/<div class=toc><b>Table of Contents<\/b>$TableOfContents<\/div>/gi;
   if ($LateRules ne '') {
     $pageText = &EvalLocalRules($LateRules, $pageText, 0);
   }
@@ -1785,7 +1785,7 @@ sub CommonMarkup {
     s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
     s/''(.*?)''/<em>$1<\/em>/g;
     if ($UseHeadings) {
-      s/(^|\n)\s*(\=+)\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $3)/geo;
+      s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
     }
     if ($TableMode) {
       s/((\|\|)+)/"<\/TD><TD class=wikitable COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
@@ -2314,7 +2314,7 @@ sub StripUrlPunct {
 }
 
 sub WikiHeadingNumber {
-    my ($depth, $text) = @_;
+    my ($depth, $text, $useNumber) = @_;
     my ($anchor, $number);
 
     return '' unless --$depth > 0;  # Don't number H1s because it looks stupid
@@ -2347,15 +2347,23 @@ sub WikiHeadingNumber {
     $anchor = '_' . (join '_', @HeadingNumbers) unless $anchor;
     $TableOfContents .= $number . &ScriptLink("$OpenPageName#$anchor",$text)
                         . "</dd>\n<dt> </dt><dd>";
-    return &StoreHref(" name=\"$anchor\"") . $number;
+    if ($useNumber) {
+      return &StoreHref(" name=\"$anchor\"") . $number;
+    } else {
+      return &StoreHref(" name=\"$anchor\"");
+    }
 }
 
 sub WikiHeading {
-  my ($pre, $depth, $text) = @_;
+  my ($pre, $depth, $text, $useNumber) = @_;
 
   $depth = length($depth);
   $depth = 6  if ($depth > 6);
-  $text =~ s/^\s*#\s+/&WikiHeadingNumber($depth,$')/e; # $' == $POSTMATCH
+  if ($useNumber) {
+    $text = &WikiHeadingNumber($depth,$text, 1) . $text;
+  } else {
+    $text = &WikiHeadingNumber($depth,$text, 0) . $text;
+  }
   return $pre . "<H$depth>$text</H$depth>\n";
 }
 
