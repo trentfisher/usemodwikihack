@@ -583,8 +583,9 @@ sub BrowsePage {
     &OpenKeptRevisions('text_default')  if (!$openKept);
     $fullHtml .= &GetDiffHTML($showDiff, $id, $diffRevision,
                               $revision, $newText);
-    $fullHtml .= "<hr class=wikilinediff>\n";
+    $fullHtml .= "<hr class=wikilinediff>";
   }
+  $fullHtml .= "\n";
   $fullHtml .= '<div class=wikitext>';
   $fullHtml .= &WikiToHTML($Text{'text'});
   # force end of page past any images... both are needed due to IE bugs
@@ -1383,10 +1384,8 @@ sub GetHeader {
                             ' (' . Ts('redirected from %s', $l . ')'));
   }
   if ($id ne '') {
-    # force link to be in the right css class
-    my $link = &GetBackLinksSearchLink($id);
-    $link =~ s/<a (.*?)>/<a $1 class=wikiheader>/g;
-    $result .= "  ".$q->h1({class => "wikiheader"}, $link.$redirtext);
+    $result .= "  ".$q->h1({class => "wikiheader"},
+                           &GetBackLinksSearchLink($id).$redirtext);
   } else {
     # this is for built-in pages (no backlinks)
     $result .= $q->h1({class => "wikiheader"}, $title);
@@ -1394,11 +1393,7 @@ sub GetHeader {
   $result .= "\n";
   if (&GetParam("toplinkbar", 1)) {
     $result .= '<div class=wikiheaderlinkbar>';
-    # get rid of the classes from link bar, should inherit from div
-    my $linkbar = &GetGotoBar($id);
-    $linkbar =~ s/\s+class=\w+//g;  # remove classes
-    $linkbar =~ s/<a (.*?)>/<a $1 class=wikiheaderlink>/g;
-    $result .= $linkbar . "<hr class=wikilineheader>";
+    $result .= &GetGotoBar($id) . "<hr class=wikilineheader>";
     $result .= '</div>';
   }
   $result .= '</div>';
@@ -1791,6 +1786,7 @@ sub CommonMarkup {
       s/((\|\|)+)/"<\/TD><TD class=wikitable COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
     }
   }
+
   return $_;
 }
 
