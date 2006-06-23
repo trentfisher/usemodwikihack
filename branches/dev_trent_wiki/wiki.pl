@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 # UseModWiki version 1.0 (September 12, 2003)
 # Copyright (C) 2000-2003 Clifford A. Adams  <caadams@usemod.com>
 # Copyright (C) 2002-2003 Sunir Shah  <sunir@sunir.org>
@@ -53,7 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
-  $SpambotPoison @SpambotDatafiles
+  $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay
   $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
@@ -183,6 +183,8 @@ $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
 $SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
 @SpambotDatafiles = (); # files containing lists of email addresses, usernames
                         # and domain names, respectively
+$SelfBan      = "";     # if action is set to this, add to self to ban list
+$SpamDelay    = 15;     # seconds to delay before forbidding a spammer
 
 # Names of sites.  (The first entry is used for the number link.)
 @IsbnNames = ('bn.com', 'amazon.com', 'search');
@@ -3499,6 +3501,8 @@ sub DoOtherRequest {
       &DoConvert();
     } elsif ($action eq "trimusers") {
       &DoTrimUsers();
+    } elsif( $SelfBan and $action eq $SelfBan ) {
+      &DoSelfBan();
     } else {
       &ReportError(Ts('Invalid action parameter %s', $action));
     }
@@ -4412,12 +4416,14 @@ sub DoPost {
   my $authorAddr = $ENV{REMOTE_ADDR};
 
   if (!&UserCanEdit($id, 1)) {
+    sleep $SpamDelay if $SpamDelay;
     # This is an internal interface--we don't need to explain
     &ReportError(Ts('Editing not allowed for %s.', $id));
     return;
   }
 
   if (&ContentIsBanned($string)) {
+    sleep $SpamDelay if $SpamDelay;
     # This is an internal interface--we don't need to explain
     &ReportError(Ts('Editing not allowed for %s.', $id));
     return;
@@ -5002,6 +5008,19 @@ sub DoUpdateBanned {
     print "<p>Updated banned list";
   }
   print &GetCommonFooter();
+}
+
+sub DoSelfBan {
+  print "Content-type: text/plain\n\n";
+  sleep $SpamDelay if $SpamDelay;
+  print "Congratulations, you have banned your own IP!\n";
+
+  my $banlist = ReadFile("$DataDir/banlist");
+  my $date = &TimeToText($Now);
+
+  $banlist .= "# self-ban on $date\n^$ENV{REMOTE_ADDR}\n\n";
+
+  WriteStringToFile("$DataDir/banlist", $banlist );
 }
 
 #------------------------------------------------------------------------
