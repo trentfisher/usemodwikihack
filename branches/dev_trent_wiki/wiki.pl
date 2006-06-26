@@ -3986,6 +3986,7 @@ sub DoIndex {
   print &GetHeader('', T('Index of all pages'), '');
   print '<br>';
   my @allpages = &AllPagesList();
+  print "<div class=wikipagelist>\n";
   print "<h2>", Ts('%s pages found:', ($#allpages + 1)), "</h2>\n";
   print "<ol>\n";
   foreach my $name (@allpages) {
@@ -4005,6 +4006,7 @@ sub DoIndex {
       print "</li>\n";
   }
   print "</ol>\n";
+  print "</div>\n";
   print &GetCommonFooter();
 }
 
@@ -4191,11 +4193,13 @@ sub DoBackLinks {
 sub PrintPageList {
   my $pagename;
 
+  print "<div class=wikipagelist>\n";
   print "<h2>", Ts('%s pages found:', ($#_ + 1)), "</h2>\n";
   foreach $pagename (@_) {
     print ".... "  if ($pagename =~ m|/|);
     print &GetPageLink($pagename), "<br>\n";
   }
+  print "</div>\n";
 }
 
 sub PrintSearchResults {
@@ -4204,6 +4208,7 @@ sub PrintSearchResults {
     my $or = T('or');
     my $searchstring = join('|', split(/ +(?:$and|$or) +/, $searchstring));
     my ($snippetlen, $maxsnippets) = (100, 4) ; #  these seem nice.
+    print "<div class=wikipagelist>\n";
     print $q->h2(Ts('%s pages found:', ($#results + 1)));
     my $files = 0; #($searchstring =~ /^\^#FILE/); # usually skip files
     foreach my $name (@results) {
@@ -4255,6 +4260,7 @@ sub PrintSearchResults {
 	  . TimeToText($Section{ts}) . ' ' . T('by') . ' '
 	  . GetAuthorLink($Section{'host'}, $Section{'username'})), '</p>';
       }
+    print "</div>\n";
 }
 
 sub DoLinks {
