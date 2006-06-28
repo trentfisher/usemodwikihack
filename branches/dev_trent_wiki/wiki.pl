@@ -92,7 +92,8 @@ $NotFoundPg  = "";              # Page for not-found links ("" for blank pg)
 $EmailFrom   = "Wiki";          # Text for "From: " field of email notes.
 $SendMail    = "/usr/lib/sendmail";  # Full path to sendmail executable
 $FooterNote  = "";              # HTML for bottom of every page
-$EditNote    = "";              # HTML notice above buttons on edit page
+$EditHelp    = "";              # HTML notice/CODE above textarea on edit page
+$EditNote    = "";              # HTML notice/CODE above buttons on edit page
 $MaxPost     = 1024 * 210;      # Maximum 210K posts (about 200K for pages)
 $NewText     = "";              # New page text ("" for default message)
 $HttpCharset = "";              # Charset for pages, like "iso-8859-2"
@@ -566,6 +567,7 @@ sub BrowsePage {
   $MainPage =~ s|/.*||;  # Only the main page name (remove subpage)
   $fullHtml = &GetHeader($id, &QuoteHtml($id), $oldId);
   if ($revision ne '') {
+    $fullHtml .= "<div class=wikidiff>\n";
     if (($revision eq $Page{'revision'}) || ($goodRevision ne '')) {
       $fullHtml .= '<b>' . Ts('Showing revision %s', $revision) . "</b><br>";
     } else {
@@ -584,6 +586,7 @@ sub BrowsePage {
   }
   $showDiff = &GetParam('diff', $allDiff);
   if ($UseDiff && $showDiff) {
+    $fullHtml .= "<div class=wikidiff>\n" if not $revision;
     $diffRevision = $goodRevision;
     $diffRevision = &GetParam('diffrevision', $diffRevision);
     # Eventually try to avoid the following keep-loading if possible?
@@ -592,16 +595,13 @@ sub BrowsePage {
                               $revision, $newText);
     $fullHtml .= "<hr class=wikilinediff>";
   }
-  $fullHtml .= "\n";
+  $fullHtml .= "</div>\n";
   $fullHtml .= '<div class=wikitext>';
   $fullHtml .= &WikiToHTML($Text{'text'});
   # force end of page past any images... both are needed due to IE bugs
-  $fullHtml .= '<br style="clear:both"/>';
-  $fullHtml .= '<p style="clear: both;"></p>';
+  #$fullHtml .= '<br style="clear:both"/>';
+  #$fullHtml .= '<p style="clear: both;"></p>';
   $fullHtml .= '</div>';
-  if (!&GetParam('embed', $EmbedWiki)) {
-    $fullHtml .= "<hr class=wikilinefooter>\n";
-  }
   if (($id eq $RCName) || (T($RCName) eq $id) || (T($id) eq $RCName)) {
     print $fullHtml;
     print '<div class=wikirc>';
@@ -610,6 +610,9 @@ sub BrowsePage {
     print "<hr class=wikilinefooter>\n"  if (!&GetParam('embed', $EmbedWiki));
     print &GetFooterText($id, $goodRevision);
     return;
+  }
+  if (!&GetParam('embed', $EmbedWiki)) {
+    $fullHtml .= "<hr class=wikilinefooter>\n";
   }
   $fullHtml .= &GetFooterText($id, $goodRevision);
   print $fullHtml;
@@ -1037,12 +1040,13 @@ sub DoHistory {
   my ($id) = @_;
   my ($html, $canEdit, $row, $newText);
 
-  print &GetHeader('', Ts('History of %s', $id), '') . '<br>';
+  print &GetHeader('', Ts('History of %s', $id), '');
   &OpenPage($id);
   &OpenDefaultText();
   $newText = $Text{'text'};
   $canEdit = 0;
   $canEdit = &UserCanEdit($id)  if ($HistoryEdit);
+  print "<div class=wikihist><br/>\n";
   if ($UseDiff) {
     print <<EOF ;
       <form action='$ScriptName' METHOD='GET'>
@@ -1066,6 +1070,7 @@ EOF
     print "<hr class=wikilinediff>\n";
     print &GetDiffHTML(&GetParam('defaultdiff', 1), $id, '', '', $newText);
   }
+  print "</div>\n";
   print &GetCommonFooter();
 }
 
@@ -3597,6 +3602,7 @@ sub DoEdit {
   $editRows = &GetParam("editrows", 20);
   $editCols = &GetParam("editcols", 65);
   print &GetHeader('', &QuoteHtml($header), '');
+  print "<div class=wikiedit>\n";
   if ($revision ne '') {
     print "\n<b>"
           . Ts('Editing old revision %s.', $revision) . "  "
@@ -3628,7 +3634,8 @@ sub DoEdit {
     print &GetHiddenValue("revision", $revision), "\n";
   }
   # print an editor helper
-  print &$EditHelp($id) if ref $EditHelp eq "CODE";
+  print (ref $EditHelp eq "CODE" ? &$EditHelp : $EditHelp)
+      if $EditHelp;
   print &GetTextArea('text', $oldText, $editRows, $editCols);
   $summary = &GetParam("summary", "*");
   print "<p>", T('Summary:'),
@@ -3649,7 +3656,7 @@ sub DoEdit {
   }
   print "<br>";
   if ($EditNote ne '') {
-    print T($EditNote) . '<br>';  # Allow translation
+    print T((ref $EditNote eq "CODE" ? &$EditNote : $EditNote)) . '<br>';  # Allow translation
   }
   print $q->submit(-name=>'Save', -value=>T('Save')), "\n";
   $userName = &GetParam("username", "");
@@ -3679,8 +3686,8 @@ sub DoEdit {
     $MainPage =~ s|/.*||;  # Only the main page name (remove subpage)
     print &WikiToHTML($oldText) . "<hr class=wikilinefooter>\n";
     # force end of page past any images, both are needed for IE bugs
-    print '<br style="clear:both"/>';
-    print '<p style="clear: both" />';
+    #print '<br style="clear:both"/>';
+    #print '<p style="clear: both" />';
     print "<h2>", T('Preview only, not yet saved'), "</h2>\n";
     print '</div>';
   }
@@ -3689,6 +3696,7 @@ sub DoEdit {
   showDirFiles($id);
   print &GetUploadLink($id, T('Upload images for this page')) . "<BR>\n";
   print $q->br();
+  print "</div>\n";
 
   print '<div class=wikifooter>';
   print &GetHistoryLink($id, T('View other revisions')) . "<br>\n";
@@ -3984,9 +3992,8 @@ sub UpdatePrefNumber {
 
 sub DoIndex {
   print &GetHeader('', T('Index of all pages'), '');
-  print '<br>';
   my @allpages = &AllPagesList();
-  print "<div class=wikipagelist>\n";
+  print "<div class=wikipagelist><br\>\n";
   print "<h2>", Ts('%s pages found:', ($#allpages + 1)), "</h2>\n";
   print "<ol>\n";
   foreach my $name (@allpages) {
@@ -4014,9 +4021,7 @@ sub DoIndex {
 # patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
 sub DoOrphans {
   print &GetHeader('', &QuoteHtml(T('Orphan Page List')), '');
-  print "<p/>\n";
   &PrintPageList(&GetOrphanList());
-  print "<p/>\n";
   print &GetCommonFooter();
 }
 
@@ -4168,7 +4173,7 @@ sub DoSearch {
       print "<p><strong>Could not open searchlog $DataDir/searchlog: $!</p>\n";
   print SL scalar(localtime(time)), " ", CGI::remote_host(), " $string\n";
   close(SL);
-  print '<br/>';
+  # print '<br/>';
   if ( $XSearchDisp ) { # managed by config file (?)
     &PrintSearchResults($string,&SearchTitleAndBody($string)) ;
   } else {
@@ -4181,7 +4186,6 @@ sub DoBackLinks {
   my ($string) = @_;
 
   print &GetHeader('', &QuoteHtml(Ts('Backlinks for: %s', $string)), '');
-  print '<br>';
   # At this time the backlinks are mostly a renamed search.
   # An initial attempt to match links only failed on subpages and free links.
   # Escape some possibly problematic characters:
@@ -4193,7 +4197,7 @@ sub DoBackLinks {
 sub PrintPageList {
   my $pagename;
 
-  print "<div class=wikipagelist>\n";
+  print "<div class=wikipagelist><br/>\n";
   print "<h2>", Ts('%s pages found:', ($#_ + 1)), "</h2>\n";
   foreach $pagename (@_) {
     print ".... "  if ($pagename =~ m|/|);
@@ -4222,7 +4226,7 @@ sub PrintSearchResults {
 	my $htmlre = join('|',(@HtmlPairs, 'pre', 'nowiki', 'code'));
 	$pageText =~ s/\<\/?($htmlre)(\s[^<>]+?)?\>//gi;
 	#  entry header
-	print '<p>' . $q->span({-class=>'wikisearchhead'}, GetPageLink($name));
+	print '<p/>' . $q->span({-class=>'wikisearchhead'}, GetPageLink($name));
 	if ($files) {
             $pageText =~ /^#FILE ([^ ]+)/;
             print $1;
@@ -4265,9 +4269,11 @@ sub PrintSearchResults {
 
 sub DoLinks {
   print &GetHeader('', &QuoteHtml(T('Full Link List')), '');
+  print "<div class=wikipagelist>\n";
   print "<p/><table class=wikitable style=\"background-color: white;\">\n";
   &PrintLinkList(&GetFullLinkList());
   print "</table>\n";
+  print "</div>\n";
   print &GetMinimumFooter();
 }
 
@@ -5562,6 +5568,7 @@ sub DoUpload {
     return if (!&UserIsEditorOrError());
   }
   # XXX intro text here...
+  print "<div class=wikiupload>\n";
   print $q->p(Ts('The current upload size limit is %s.', $MaxPost),
               Ts('Change the %s variable to increase this limit.',
                  '$MaxPost'));
@@ -5582,6 +5589,7 @@ sub DoUpload {
       showDirFiles($id);
   }
   print $q->end_form();
+  print "</div>\n";
 
   print &GetCommonFooter(); 
 }
