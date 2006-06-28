@@ -4190,6 +4190,10 @@ sub DoBackLinks {
   # An initial attempt to match links only failed on subpages and free links.
   # Escape some possibly problematic characters:
   $string =~ s/([-\'().,])/\\$1/g; 
+  # patch from
+  # http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BacklinksImproved
+  $string =~ s/([_ ])/( |_)/g; 
+  $string = ($string !~ m,/,) ? "\\b$string\\b" : "$string\\b";
   &PrintPageList(&SearchTitleAndBody($string));
   print &GetCommonFooter();
 }
