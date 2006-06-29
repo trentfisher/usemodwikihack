@@ -54,7 +54,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
   $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay
-  $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist
+  $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist $BackGotoBar
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -98,6 +98,7 @@ $MaxPost     = 1024 * 210;      # Maximum 210K posts (about 200K for pages)
 $NewText     = "";              # New page text ("" for default message)
 $HttpCharset = "";              # Charset for pages, like "iso-8859-2"
 $UserGotoBar = "";              # HTML added to end of goto bar
+$BackGotoBar = 1;               # 1 = backlink link in goto bar, 0 = none
 $InterWikiMoniker = '';         # InterWiki moniker for this wiki. (for RSS)
 $SiteDescription  = $SiteName;  # Description of this wiki. (for RSS)
 $RssLogoUrl  = '';              # Optional image for RSS feed
@@ -1257,8 +1258,8 @@ sub GetPageOrEditLink {
 }
 
 sub GetBackLinksSearchLink {
-  my ($id) = @_;
-  my $name = $id;
+  my ($id) = shift;
+  my $name = shift || $id;
 
   $id =~ s|.+/|/|;   # Subpage match: search for just /SubName
   if ($FreeLinks) {
@@ -1665,6 +1666,8 @@ sub GetGotoBar {
     $bartext .= " | " . &GetPageLink($main);
   }
   $bartext .= " | " . &GetPageLink($RCName);
+  $bartext .= " | " . &GetBackLinksSearchLink($id, "What links here")
+      if $BackGotoBar and $id;
   $bartext .= " | " . &GetPrefsLink();
   if ($UseUpload && &UserCanUpload()) {
     $bartext .= " | " . &GetUploadLink();
@@ -1779,7 +1782,7 @@ sub WikiToHTML {
     pop @HeadingNumbers;
     $TableOfContents .= "</dd></dl>\n\n";
   }
-  $pageText =~ s/&lt;toc&gt;/<div class=toc><b>Table of Contents<\/b>$TableOfContents<\/div>/gi;
+  $pageText =~ s/&lt;toc&gt;/<div class=toc><h4>Table of Contents<\/h4>$TableOfContents<\/div>/gi;
   if ($LateRules ne '') {
     $pageText = &EvalLocalRules($LateRules, $pageText, 0);
   }
@@ -4184,6 +4187,7 @@ sub DoSearch {
 
 sub DoBackLinks {
   my ($string) = @_;
+  my $title = $string; # keep an unmangled version
 
   print &GetHeader('', &QuoteHtml(Ts('Backlinks for: %s', $string)), '');
   # At this time the backlinks are mostly a renamed search.
@@ -4194,7 +4198,7 @@ sub DoBackLinks {
   # http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BacklinksImproved
   $string =~ s/([_ ])/( |_)/g; 
   $string = ($string !~ m,/,) ? "\\b$string\\b" : "$string\\b";
-  &PrintPageList(&SearchTitleAndBody($string));
+  &PrintPageList(grep($_ ne $title, &SearchTitleAndBody($string)));
   print &GetCommonFooter();
 }
 
