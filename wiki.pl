@@ -1782,7 +1782,7 @@ sub WikiToHTML {
     pop @HeadingNumbers;
     $TableOfContents .= "</dd></dl>\n\n";
   }
-  $pageText =~ s/&lt;toc&gt;/<div class=toc><b>Table of Contents<\/b>$TableOfContents<\/div>/gi;
+  $pageText =~ s/&lt;toc&gt;/<div class=toc><h4>Table of Contents<\/h4>$TableOfContents<\/div>/gi;
   if ($LateRules ne '') {
     $pageText = &EvalLocalRules($LateRules, $pageText, 0);
   }
@@ -4187,6 +4187,7 @@ sub DoSearch {
 
 sub DoBackLinks {
   my ($string) = @_;
+  my $title = $string; # keep an unmangled version
 
   print &GetHeader('', &QuoteHtml(Ts('Backlinks for: %s', $string)), '');
   # At this time the backlinks are mostly a renamed search.
@@ -4197,7 +4198,7 @@ sub DoBackLinks {
   # http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BacklinksImproved
   $string =~ s/([_ ])/( |_)/g; 
   $string = ($string !~ m,/,) ? "\\b$string\\b" : "$string\\b";
-  &PrintPageList(&SearchTitleAndBody($string));
+  &PrintPageList(grep($_ ne $title, &SearchTitleAndBody($string)));
   print &GetCommonFooter();
 }
 
