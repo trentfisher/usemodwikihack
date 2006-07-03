@@ -53,7 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
-  $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay
+  $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay $NoAnonyms
   $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist $BackGotoBar
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
@@ -187,6 +187,7 @@ $SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
                         # and domain names, respectively
 $SelfBan      = "";     # if action is set to this, add to self to ban list
 $SpamDelay    = 15;     # seconds to delay before forbidding a spammer
+$NoAnonyms    = 0 ;     # 1 = editing only for users with a defined username
 
 # Names of sites.  (The first entry is used for the number link.)
 @IsbnNames = ('bn.com', 'amazon.com', 'search');
@@ -3037,6 +3038,10 @@ sub UserCanEdit {
     return 1  if (&UserIsEditor());
     return 0;
   }
+  if($NoAnonyms) {
+    return 1  if (&UserIsEditor());
+    return 0 unless(&GetParam("username") ne "");
+  }
   if ($deepCheck) {   # Deeper but slower checks (not every page)
     return 1  if (&UserIsEditor());
     return 0  if (&UserIsBanned());
@@ -3065,6 +3070,11 @@ sub UserIsBanned {
 sub ContentIsBanned {
     my ($content) = @_;
     my ($data, $status);
+
+    # admins and editors can get around the ban
+    return 0  if (&UserIsAdmin());
+    return 0  if (&UserIsEditor());
+
     ($status, $data) = &ReadFile("$DataDir/spamlist");
     return 0  if (!$status);            # no file exists, so no ban
     $data =~ s/\r//g;                   # remove \r from end of lines
@@ -3574,6 +3584,12 @@ sub DoEdit {
       print T('Editing not allowed: user, ip, or network is blocked.');
       print "<p>";
       print T('Contact the wiki administrator for more information.');
+    } elsif ($NoAnonyms && !(&GetParam("username") ne "")) {
+      print T('Editing not allowed: Anonymous users not allowed.') ;
+      print "<p/>" ;
+      print T('Please click on ' .
+              &ScriptLink("action=editprefs", T('Preferences')) .
+              ' and set your username.');
     } else {
       print Ts('Editing not allowed: %s is read-only.', $SiteName);
     }
