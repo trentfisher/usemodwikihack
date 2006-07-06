@@ -54,7 +54,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
   $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay $NoAnonyms
-  $XSearchDisp $TopSearchBox $EditHelp $BackGotoBar
+  $XSearchDisp $TopSearchBox $EditHelp $BackGotoBar $EditPageLink
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -99,6 +99,7 @@ $NewText     = "";              # New page text ("" for default message)
 $HttpCharset = "";              # Charset for pages, like "iso-8859-2"
 $UserGotoBar = "";              # HTML added to end of goto bar
 $BackGotoBar = 1;               # 1 = backlink link in goto bar, 0 = none
+$EditPageLink= 1;               # 1 = edit link at top of page, 0 = none
 $InterWikiMoniker = '';         # InterWiki moniker for this wiki. (for RSS)
 $SiteDescription  = $SiteName;  # Description of this wiki. (for RSS)
 $RssLogoUrl  = '';              # Optional image for RSS feed
@@ -1676,6 +1677,21 @@ sub GetGotoBar {
   }
   if (&GetParam("linkrandom", 0)) {
     $bartext .= " | " . &GetRandomLink();
+  }
+  # optional: add edit link in top goto bar
+  if (&UserCanEdit($id, 0) and $EditPageLink and $id)
+  {
+    my $revision = &GetParam('revision', '');
+    if ($revision ne '')
+    {
+      $bartext .= " | " .
+          &GetOldPageLink('edit', $id, $revision,
+                          Ts('Edit rev %s of Page', $revision));
+    }
+    else
+    {
+      $bartext .= " | " . &GetEditLink($id, T('Edit Page'));
+    }
   }
   if ($UserGotoBar ne '') {
     $bartext .= " | " . $UserGotoBar;
