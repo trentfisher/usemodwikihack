@@ -53,8 +53,8 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
-  $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay
-  $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist $BackGotoBar
+  $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay $NoAnonyms
+  $XSearchDisp $TopSearchBox $EditHelp $BackGotoBar $EditPageLink
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -99,6 +99,7 @@ $NewText     = "";              # New page text ("" for default message)
 $HttpCharset = "";              # Charset for pages, like "iso-8859-2"
 $UserGotoBar = "";              # HTML added to end of goto bar
 $BackGotoBar = 1;               # 1 = backlink link in goto bar, 0 = none
+$EditPageLink= 1;               # 1 = edit link at top of page, 0 = none
 $InterWikiMoniker = '';         # InterWiki moniker for this wiki. (for RSS)
 $SiteDescription  = $SiteName;  # Description of this wiki. (for RSS)
 $RssLogoUrl  = '';              # Optional image for RSS feed
@@ -141,7 +142,6 @@ $UseUpload   = 0;           # 1 = allow uploads,      0 = no uploads
 $LogoLeft     = 0;      # 1 = logo on left,       0 = logo on right
 $RecentTop    = 1;      # 1 = recent on top,      0 = recent on bottom
 $UseDiffLog   = 1;      # 1 = save diffs to log,  0 = do not save diffs
-$MetaNoIndexHist  = 0;      # 1 = Disallow robots indexing old pages, 0 = Allow robots to index old pages
 $KeepMajor    = 1;      # 1 = keep major rev,     0 = expire all revisions
 $KeepAuthor   = 1;      # 1 = keep author rev,    0 = expire all revisions
 $ShowEdits    = 0;      # 1 = show minor edits,   0 = hide edits by default
@@ -187,6 +187,7 @@ $SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
                         # and domain names, respectively
 $SelfBan      = "";     # if action is set to this, add to self to ban list
 $SpamDelay    = 15;     # seconds to delay before forbidding a spammer
+$NoAnonyms    = 0 ;     # 1 = editing only for users with a defined username
 
 # Names of sites.  (The first entry is used for the number link.)
 @IsbnNames = ('bn.com', 'amazon.com', 'search');
@@ -1455,16 +1456,18 @@ sub GetHtmlHeader {
   }
 
   # if we don't want robots indexing our history pages
-  if ($MetaNoIndexHist) {
+  {
       my $action = lc(&GetParam('action', ''));
-      my $revision = lc(&GetParam('revision', ''));
-      my $diff = lc(&GetParam('diff', ''));
 
-      if (($action eq "browse" && $revision ne '') || # looking at a diff
-          ($action eq "browse" && $diff ne '') ||     # looking at a diff
-          ($action eq "history" ))                    # looking at history page
+      if ($action eq "" ||                            # regular page browse
+          $action eq "rc" ||                          # recent changes
+          $action eq "index")                         # page list
       {
-          $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>";
+          $html .= "<META NAME='robots' CONTENT='index,follow'/>\n";
+      }
+      else
+      {
+          $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>\n";
       }
   }
 
@@ -1674,6 +1677,21 @@ sub GetGotoBar {
   }
   if (&GetParam("linkrandom", 0)) {
     $bartext .= " | " . &GetRandomLink();
+  }
+  # optional: add edit link in top goto bar
+  if (&UserCanEdit($id, 0) and $EditPageLink and $id)
+  {
+    my $revision = &GetParam('revision', '');
+    if ($revision ne '')
+    {
+      $bartext .= " | " .
+          &GetOldPageLink('edit', $id, $revision,
+                          Ts('Edit rev %s of Page', $revision));
+    }
+    else
+    {
+      $bartext .= " | " . &GetEditLink($id, T('Edit Page'));
+    }
   }
   if ($UserGotoBar ne '') {
     $bartext .= " | " . $UserGotoBar;
@@ -3037,6 +3055,10 @@ sub UserCanEdit {
     return 1  if (&UserIsEditor());
     return 0;
   }
+  if($NoAnonyms) {
+    return 1  if (&UserIsEditor());
+    return 0 unless(&GetParam("username") ne "");
+  }
   if ($deepCheck) {   # Deeper but slower checks (not every page)
     return 1  if (&UserIsEditor());
     return 0  if (&UserIsBanned());
@@ -3065,6 +3087,11 @@ sub UserIsBanned {
 sub ContentIsBanned {
     my ($content) = @_;
     my ($data, $status);
+
+    # admins and editors can get around the ban
+    return 0  if (&UserIsAdmin());
+    return 0  if (&UserIsEditor());
+
     ($status, $data) = &ReadFile("$DataDir/spamlist");
     return 0  if (!$status);            # no file exists, so no ban
     $data =~ s/\r//g;                   # remove \r from end of lines
@@ -3574,6 +3601,12 @@ sub DoEdit {
       print T('Editing not allowed: user, ip, or network is blocked.');
       print "<p>";
       print T('Contact the wiki administrator for more information.');
+    } elsif ($NoAnonyms && !(&GetParam("username") ne "")) {
+      print T('Editing not allowed: Anonymous users not allowed.') ;
+      print "<p/>" ;
+      print T('Please click on ' .
+              &ScriptLink("action=editprefs", T('Preferences')) .
+              ' and set your username.');
     } else {
       print Ts('Editing not allowed: %s is read-only.', $SiteName);
     }
