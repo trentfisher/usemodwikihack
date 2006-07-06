@@ -1457,11 +1457,8 @@ sub GetHtmlHeader {
   # if we don't want robots indexing our history pages
   {
       my $action = lc(&GetParam('action', ''));
-      my $revision = lc(&GetParam('revision', ''));
-      my $diff = lc(&GetParam('diff', ''));
 
-      $html .= "<!-- action = $action revision = $revision diff = $diff -->\n";
-      if ($action eq "" ||                            # reg page browse
+      if ($action eq "" ||                            # regular page browse
           $action eq "rc" ||                          # recent changes
           $action eq "index")                         # page list
       {
