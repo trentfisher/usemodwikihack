@@ -99,7 +99,7 @@ $NewText     = "";              # New page text ("" for default message)
 $HttpCharset = "";              # Charset for pages, like "iso-8859-2"
 $UserGotoBar = "";              # HTML added to end of goto bar
 $BackGotoBar = 1;               # 1 = backlink link in goto bar, 0 = none
-$EditPageLink= 1;               # 1 = edit link at top of page, 0 = none
+$EditPageLink= 0;               # 1 = edit link at top of page, 0 = none
 $InterWikiMoniker = '';         # InterWiki moniker for this wiki. (for RSS)
 $SiteDescription  = $SiteName;  # Description of this wiki. (for RSS)
 $RssLogoUrl  = '';              # Optional image for RSS feed
@@ -186,7 +186,7 @@ $SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
 @SpambotDatafiles = (); # files containing lists of email addresses, usernames
                         # and domain names, respectively
 $SelfBan      = "";     # if action is set to this, add to self to ban list
-$SpamDelay    = 15;     # seconds to delay before forbidding a spammer
+$SpamDelay    = 0;      # seconds to delay before forbidding a spammer
 $NoAnonyms    = 0 ;     # 1 = editing only for users with a defined username
 
 # Names of sites.  (The first entry is used for the number link.)
