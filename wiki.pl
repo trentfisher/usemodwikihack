@@ -54,7 +54,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
   $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay $NoAnonyms
-  $XSearchDisp $TopSearchBox $EditHelp $MetaNoIndexHist $BackGotoBar
+  $XSearchDisp $TopSearchBox $EditHelp $BackGotoBar
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -141,7 +141,6 @@ $UseUpload   = 0;           # 1 = allow uploads,      0 = no uploads
 $LogoLeft     = 0;      # 1 = logo on left,       0 = logo on right
 $RecentTop    = 1;      # 1 = recent on top,      0 = recent on bottom
 $UseDiffLog   = 1;      # 1 = save diffs to log,  0 = do not save diffs
-$MetaNoIndexHist  = 0;      # 1 = Disallow robots indexing old pages, 0 = Allow robots to index old pages
 $KeepMajor    = 1;      # 1 = keep major rev,     0 = expire all revisions
 $KeepAuthor   = 1;      # 1 = keep author rev,    0 = expire all revisions
 $ShowEdits    = 0;      # 1 = show minor edits,   0 = hide edits by default
@@ -1456,16 +1455,21 @@ sub GetHtmlHeader {
   }
 
   # if we don't want robots indexing our history pages
-  if ($MetaNoIndexHist) {
+  {
       my $action = lc(&GetParam('action', ''));
       my $revision = lc(&GetParam('revision', ''));
       my $diff = lc(&GetParam('diff', ''));
 
-      if (($action eq "browse" && $revision ne '') || # looking at a diff
-          ($action eq "browse" && $diff ne '') ||     # looking at a diff
-          ($action eq "history" ))                    # looking at history page
+      $html .= "<!-- action = $action revision = $revision diff = $diff -->\n";
+      if ($action eq "" ||                            # reg page browse
+          $action eq "rc" ||                          # recent changes
+          $action eq "index")                         # page list
       {
-          $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>";
+          $html .= "<META NAME='robots' CONTENT='index,follow'/>\n";
+      }
+      else
+      {
+          $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>\n";
       }
   }
 
