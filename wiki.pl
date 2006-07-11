@@ -187,7 +187,7 @@ $SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
                         # and domain names, respectively
 $SelfBan      = "";     # if action is set to this, add to self to ban list
 $SpamDelay    = 0;      # seconds to delay before forbidding a spammer
-$NoAnonyms    = 0 ;     # 1 = editing only for users with a defined username
+$NoAnonyms    = 0;      # 1 = editing only for users with a defined username
 
 # Names of sites.  (The first entry is used for the number link.)
 @IsbnNames = ('bn.com', 'amazon.com', 'search');
@@ -1791,7 +1791,8 @@ sub WikiToHTML {
         s/\&lt;code\&gt;((.|\n)*?)\&lt;\/code\&gt;/&StorePre($1, "code")/ige;
     $pageText =~ s/((.|\n)+?\n)\s*\n/&ParseParagraph($1)/geo or
         $pageText =~ s/((.|\n)+?\n)\s*$/&ParseParagraph($1)/geo;
-    $pageText =~ s/(.*)<\/p>(.+)$/$1.&ParseParagraph($2)/seo;
+    # bugfix: enclose $1 in quotes to prevent it from getting clobbered
+    $pageText =~ s/(.*)<\/p>(.+)$/"$1".&ParseParagraph($2)/seo;
   } else {
     $pageText = &CommonMarkup($pageText, 1, 0);   # Multi-line markup
     $pageText = &WikiLinesToHtml($pageText);      # Line-oriented markup
@@ -1903,6 +1904,7 @@ sub CommonMarkup {
     # by matching the inner quotes for the strong pattern.
     s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
     s/''(.*?)''/<em>$1<\/em>/g;
+    s/--(.*?)--/<strike>$1<\/strike>/g;
     if ($UseHeadings) {
       s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
     }
