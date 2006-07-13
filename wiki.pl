@@ -1947,7 +1947,7 @@ sub WikiLinesToHtml {
       }
       else
       {
-        $codeAttributes = 'TYPE="'.qw(1 A a I i)[$depth-1].'" '.
+        $codeAttributes = 'TYPE="'.qw(1 A a I i)[$depth-1].'" ';
       }
     } elsif ($TableSyntax &&
              s/^((\|\|)+)(.*)\|\|\s*$/"<TR class=wikitable"
