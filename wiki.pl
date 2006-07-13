@@ -187,7 +187,7 @@ $SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
                         # and domain names, respectively
 $SelfBan      = "";     # if action is set to this, add to self to ban list
 $SpamDelay    = 0;      # seconds to delay before forbidding a spammer
-$NoAnonyms    = 0 ;     # 1 = editing only for users with a defined username
+$NoAnonyms    = 0;      # 1 = editing only for users with a defined username
 
 # Names of sites.  (The first entry is used for the number link.)
 @IsbnNames = ('bn.com', 'amazon.com', 'search');
@@ -1791,7 +1791,8 @@ sub WikiToHTML {
         s/\&lt;code\&gt;((.|\n)*?)\&lt;\/code\&gt;/&StorePre($1, "code")/ige;
     $pageText =~ s/((.|\n)+?\n)\s*\n/&ParseParagraph($1)/geo or
         $pageText =~ s/((.|\n)+?\n)\s*$/&ParseParagraph($1)/geo;
-    $pageText =~ s/(.*)<\/p>(.+)$/$1.&ParseParagraph($2)/seo;
+    # bugfix: enclose $1 in quotes to prevent it from getting clobbered
+    $pageText =~ s/(.*)<\/p>(.+)$/"$1".&ParseParagraph($2)/seo;
   } else {
     $pageText = &CommonMarkup($pageText, 1, 0);   # Multi-line markup
     $pageText = &WikiLinesToHtml($pageText);      # Line-oriented markup
@@ -1867,15 +1868,6 @@ sub CommonMarkup {
     s/\[$InterLinkPattern\]/&StoreBracketInterPage($1, "", 0)/geo;
     s/\b$UrlPattern/&StoreUrl($1, $useImage)/geo;
     s/\b$InterLinkPattern/&StoreInterPage($1, $useImage)/geo;
-    if ($WikiLinks) {
-      s/$AnchoredLinkPattern/&StoreRaw(&GetPageOrEditAnchoredLink($1,
-                             $2, ""))/geo if $NamedAnchors;
-      # CAA: Putting \b in front of $LinkPattern breaks /SubPage links
-      #      (subpage links without the main page)
-      s/$LinkPattern/&GetPageOrEditLink($1, "")/geo;
-    }
-    s/\b$RFCPattern/&StoreRFC($1)/geo;
-    s/\b$ISBNPattern/&StoreISBN($1)/geo;
     if ($UseUpload) {
       s/$UploadPattern/&StoreUpload($1)/geo;
       s/\[+([Ii]mage:.+?\.$ImageExtensions)\s+([^\]]+)?\]+/&StoreImage($1, $3)/geo;
@@ -1885,6 +1877,15 @@ sub CommonMarkup {
       # around an image (twice for IE bugs)
       s(\b[Ii]mage:break\b)(<br clear=all><BR clear=all>)go;
     }
+    if ($WikiLinks) {
+      s/$AnchoredLinkPattern/&StoreRaw(&GetPageOrEditAnchoredLink($1,
+                             $2, ""))/geo if $NamedAnchors;
+      # CAA: Putting \b in front of $LinkPattern breaks /SubPage links
+      #      (subpage links without the main page)
+      s/$LinkPattern/&GetPageOrEditLink($1, "")/geo;
+    }
+    s/\b$RFCPattern/&StoreRFC($1)/geo;
+    s/\b$ISBNPattern/&StoreISBN($1)/geo;
 
     if ($ThinLine) {
       if ($OldThinLine) {  # Backwards compatible, conflicts with headers
@@ -1903,6 +1904,7 @@ sub CommonMarkup {
     # by matching the inner quotes for the strong pattern.
     s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
     s/''(.*?)''/<em>$1<\/em>/g;
+    s/--(\S.*?)--/<strike>$1<\/strike>/g;
     if ($UseHeadings) {
       s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
     }
@@ -1942,6 +1944,10 @@ sub WikiLinesToHtml {
       $depth = length $1;
       if ($3) {
         $codeAttributes = "TYPE=\"$3\"";
+      }
+      else
+      {
+        $codeAttributes = 'TYPE="'.qw(1 A a I i)[$depth-1].'" ';
       }
     } elsif ($TableSyntax &&
              s/^((\|\|)+)(.*)\|\|\s*$/"<TR class=wikitable"
@@ -2234,6 +2240,7 @@ sub StoreImage {
   }
 
   # locate the file, first see if it's associated with this page
+  $imgName =~ s/\%20/ /g;  # Replace escaped spaces XXX generalize this
   if (-f "$UploadDir/$leftChar/$id/$imgName")
   {
       $target = $UploadUrl."/$leftChar/$id/$imgName";
@@ -2245,7 +2252,7 @@ sub StoreImage {
   else
   {
       # no such image... provide a link to upload it
-      return &GetUploadLink($id, T('Upload missing image: '.$imgName.''));
+      return &StoreRaw(&GetUploadLink($id, T('Upload missing image: '.$imgName.'')));
   }
 
   my $imgattr = {src => $target,
@@ -2257,10 +2264,10 @@ sub StoreImage {
   # we have to hack it
   if ($param eq "center")
   {
-      return "<center>".$q->img($imgattr)."</center>";
+      return &StoreRaw("<center>".$q->img($imgattr)."</center>");
   }
 
-  return $q->img($imgattr);
+  return &StoreRaw($q->img($imgattr));
 }
 
 sub UrlLink {
@@ -5677,6 +5684,7 @@ sub SaveUpload {
 
   print $q->p("You may include this image in this wiki page with one of these example links:");
   $printFilename = $filename;
+  # XXX generalize this
   $printFilename =~ s/ /\%20/g;  # Replace spaces with escaped spaces
   if ($q->param('id'))
   {
