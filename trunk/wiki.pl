@@ -858,18 +858,16 @@ sub GetRc {
   if (1 == $rcType) {
     $result .= "</UL>\n"  if ($inlist);  # Close final tag
     # summary of changes
-    my $c = 'class="wikitable"';
-    $result .= "<table $c>\n";
-    
-    $result .= "<tr $c><th $c colspan=3>Totals by user</th></tr>\n";
-    $result .= "<tr $c><th $c>User</th><th $c>New pages</th><th $c>Changes</th></tr>\n";
+    $result .= "<table class=wikitable>\n";
+    $result .= "<tr><th colspan=3>Totals by user</th></tr>\n";
+    $result .= "<tr><th>User</th><th>New pages</th><th>Changes</th></tr>\n";
     foreach my $u (sort keys %{$totals->{userchg}})
     {
-        $result .= sprintf("<tr $c><td $c>%s</td><td $c>%s</td><td $c>%s</td></tr>\n",
+        $result .= sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n",
                            $u, $totals->{usernew}{$u} || 0,
                            $totals->{userchg}{$u} || 0);
     }
-    $result .= sprintf("<tr $c><th $c>%s</th><td $c>%s</td><td $c>%s</td></tr>\n",
+    $result .= sprintf("<tr><th>%s</th><td>%s</td><td>%s</td></tr>\n",
                        "total", $totals->{new}||0, $totals->{chg}||0);
     $result .= "</table>\n";
   }
@@ -918,7 +916,7 @@ sub GetHtmlRcLine {
     $link .= &ScriptLinkDiff(4, $pagename, $tDiff, "") . "  ";
   }
   $link .= (1 == $revision ? "<strong>N</strong> " : "");   # mark new pages
-  $link .= ($isEdit ? "<strong>n</strong>" : "");  # mark minor edits
+  #$link .= ($isEdit ? "<strong>m</strong>" : "");  # mark minor edits
   $link .= &GetPageLink($pagename);
   $html .= "<li>$link ";
   $html .=  &CalcTime($timestamp) . " $count$edit" . " $sum";
@@ -1909,7 +1907,7 @@ sub CommonMarkup {
       s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
     }
     if ($TableMode) {
-      s/((\|\|)+)/"<\/TD><TD class=wikitable COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
+      s/((\|\|)+)/"<\/TD><TD COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
     }
   }
 
@@ -1950,8 +1948,7 @@ sub WikiLinesToHtml {
         $codeAttributes = 'TYPE="'.qw(1 A a I i)[$depth-1].'" ';
       }
     } elsif ($TableSyntax &&
-             s/^((\|\|)+)(.*)\|\|\s*$/"<TR class=wikitable"
-                                      . "><TD class=wikitable colspan='"
+             s/^((\|\|)+)(.*)\|\|\s*$/"<TR><TD colspan='"
                                . (length($1)\/2) . "'>$3<\/TD><\/TR>\n"/e) {
       $code = 'TABLE';
       $codeAttributes = "class=wikitable";
@@ -4360,7 +4357,7 @@ sub PrintLinkList {
     my $name = shift(@links);
     if ($names)
     {
-        print $q->Tr($q->td({class => "wikitable"},
+        print $q->Tr($q->td(
                             [$name,
                              join(' ', @links)])),"\n";
     }
