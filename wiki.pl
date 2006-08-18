@@ -26,6 +26,7 @@
 #    59 Temple Place, Suite 330
 #    Boston, MA 02111-1307 USA
 
+use Diff;
 package UseModWiki;
 use strict;
 local $| = 1;  # Do not buffer output (localized for mod_perl)
@@ -2636,72 +2637,51 @@ sub GetKeptDiff {
 }
 
 sub GetDiff {
-  my ($old, $new, $lock) = @_;
-  my ($diff_out, $oldName, $newName);
-
-  &CreateDir($TempDir);
-  $oldName = "$TempDir/old_diff";
-  $newName = "$TempDir/new_diff";
-  if ($lock) {
-    &RequestDiffLock() or return "";
-    $oldName .= "_locked";
-    $newName .= "_locked";
+  my $textOld = shift;
+  my $textNew = shift;
+  my %format = (
+    paraIdent     => '<tr valign=top><td class="diff-para-ident"><p>%text%</p></td><td></td><td class="diff-para-ident"><p>%text%</p></td></tr>',
+    paraAdded     => '<tr valign=top><td class="diff-para-ident"></td><td></td><td class="diff-para-added"><p>%text%</p></td></tr>',
+    paraDeleted   => '<tr valign=top><td class="diff-para-deleted"><p>%text%</p></td><td></td><td class="diff-para-ident"></td></tr>',
+    paraChanged   => '<tr valign=top><td class="diff-para-changed-old"><p>%text%</p></td><td></td><td class="diff-para-changed-new"><p>%text%</p></td></tr>',
+    paraReplaced  => '<tr valign=top><td class="diff-para-deleted"><p>%textDeleted%</p></td><td></td><td class="diff-para-added"><p>%textAdded%</p></td></tr>',
+    changeContext => 1,
+    changeHeader  => '<tr valign=top><td class="diff-header" width="48%">Paragraph %oldFrom%</td><td width="4%"></td><td class="diff-header" width="48%">Paragraph %newFrom%</td></tr>',
+    spanIdent     => '<span class="diff-span-ident">%text%</span>',
+    spanAdded     => '<span class="diff-span-added">%text%</span>',
+    spanDeleted   => '<span class="diff-span-deleted">%text%</span>',
+    processText => sub {
+      my $text = shift;
+      $text =~ s[&]               [&amp;]g;
+      $text =~ s[<]               [&lt;]g;
+      $text =~ s[>]               [&gt;]g;
+      $text =~ s[\n]              [<br>\n]g;
+      $text =~ s[\r]              []g;
+      $text =~ s[([\t ]+)([\t ])] [('&nbsp;' x length($1)) . $2]ge;
+      $text =~ s[^[\t ]]          [&nbsp;];
+      return $text;
+    }
+  );
+  my $diff = Diff::diffText($textOld, $textNew, %format);
+  if ($diff ne '') {
+    $diff =~ s[<td class="diff-para-changed-old">(.*?)</td>] [
+      my $textChanged = $1;
+      $textChanged =~ s[<span class="diff-span-added">.*?</span>] []gs;
+      qq[<td class="diff-para-changed">$textChanged</td>];
+    ]ges;
+    $diff =~ s[<td class="diff-para-changed-new">(.*?)</td>] [
+      my $textChanged = $1;
+      $textChanged =~ s[<span class="diff-span-deleted">.*?</span>] []gs;
+      qq[<td class="diff-para-changed">$textChanged</td>];
+    ]ges;
+    $diff = qq[<table width="100%" border=0 cellspacing=0 cellpadding=0>$diff</table>];
   }
-  &WriteStringToFile($oldName, $old);
-  &WriteStringToFile($newName, $new);
-  $diff_out = `diff $oldName $newName`;
-  &ReleaseDiffLock()  if ($lock);
-  $diff_out =~ s/\\ No newline.*\n//g;   # Get rid of common complaint.
-  # No need to unlink temp files--next diff will just overwrite.
-  return $diff_out;
+  return $diff;
 }
 
 sub DiffToHTML {
-  my ($html) = @_;
-  my ($tChanged, $tRemoved, $tAdded);
-
-  $tChanged = T('Changed:');
-  $tRemoved = T('Removed:');
-  $tAdded   = T('Added:');
-  $html =~ s/\n--+//g;
-  # Note: Need spaces before <br> to be different from diff section.
-  $html =~ s/(^|\n)(\d+.*c.*)/$1 <br><strong>$tChanged $2<\/strong><br>/g;
-  $html =~ s/(^|\n)(\d+.*d.*)/$1 <br><strong>$tRemoved $2<\/strong><br>/g;
-  $html =~ s/(^|\n)(\d+.*a.*)/$1 <br><strong>$tAdded $2<\/strong><br>/g;
-  $html =~ s/\n((<.*\n)+)/&ColorDiff($1, $DiffColor1, 0)/ge;
-  $html =~ s/\n((>.*\n)+)/&ColorDiff($1, $DiffColor2, 1)/ge;
-  return $html;
-}
-
-sub ColorDiff {
-  my ($diff, $color, $type) = @_;
-  my ($colorHtml, $classHtml);
-
-  $diff =~ s/(^|\n)[<>]/$1/g;
-  $diff = &QuoteHtml($diff);
-  # Do some of the Wiki markup rules:
-  %SaveUrl = ();
-  %SaveNumUrl = ();
-  $SaveUrlIndex = 0;
-  $SaveNumUrlIndex = 0;
-  $diff = &RemoveFS($diff);
-  $diff = &CommonMarkup($diff, 0, 1);      # No images, all patterns
-  if ($LateRules ne '') {
-    $diff = &EvalLocalRules($LateRules, $diff, 1);
-  }
-  1 while $diff =~ s/$FS(\d+)$FS/$SaveUrl{$1}/ge;   # Restore saved text
-  $diff =~ s/\r?\n/<br>/g;
-  $colorHtml = '';
-  if ($color ne '') {
-    $colorHtml = " bgcolor=$color";
-  }
-  if ($type) {
-    $classHtml = ' class=wikidiffnew';
-  } else {
-    $classHtml = ' class=wikidiffold';
-  }
-  return "<table width=\"95\%\"$colorHtml$classHtml><tr><td>\n" . $diff
-         . "</td></tr></table>\n";
+	shift
+	#This is the place where you could take care of per-user options. 
 }
 
 # ==== Database (Page, Section, Text, Kept, User) functions ====
@@ -4623,6 +4603,7 @@ sub UpdateDiffs {
   $oldMajor  = &GetPageCache('oldmajor');
   $oldAuthor = &GetPageCache('oldauthor');
   if ($UseDiffLog) {
+	my $editDiff = Diff::diffClassic($old, $new);
     &WriteDiff($id, $editTime, $editDiff);
   }
   &SetPageCache('diff_default_minor', $editDiff);
