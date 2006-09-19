@@ -1377,7 +1377,7 @@ sub GetHeader {
     }
     #$helpImage = "img src=\"$LogoUrl\" alt=\"Help\" border=0 align=\"right\"";
     $result .= &ScriptLink($HomePage, "<$logoImage>")."\n";
-    #$result .= "<a href=\"http://www.usemod.com/cgi-bin/wiki.pl\"><img src=\"/dmginternal/siebel-logo.gif\" alt=\"Help\" border=0 align=\"right\"></a>";
+    #$result .= "<a href=\"http://www.usemod.com/cgi-bin/wiki.pl\"><img src=\"/dbawiki/oracle.gif\" alt=\"Help\" border=0 align=\"right\"></a>";
   }
   # force a search form at the top of the page
   if ($TopSearchBox)
