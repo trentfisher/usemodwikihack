@@ -1902,7 +1902,13 @@ sub CommonMarkup {
     # by matching the inner quotes for the strong pattern.
     s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
     s/''(.*?)''/<em>$1<\/em>/g;
-    s/--(\S.*?)--/<strike>$1<\/strike>/g;
+    if (/^\S/)  # only do strike-through in non-preformated sections
+    {
+        s/[^-]--([^\s-].*?[^\s-])--[^-]/<strike>$1<\/strike>/g or
+            s/^--([^\s-].*?[^\s-])--[^-]/<strike>$1<\/strike>/g or
+            s/[^-]--([^\s-].*?[^\s-])--$/<strike>$1<\/strike>/g or
+            s/^--([^\s-].*?[^\s-])--$/<strike>$1<\/strike>/g
+    }
     if ($UseHeadings) {
       s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
     }
