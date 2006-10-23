@@ -1884,6 +1884,7 @@ sub CommonMarkup {
       s/$LinkPattern/&GetPageOrEditLink($1, "")/geo;
     }
     s/\b$RFCPattern/&StoreRFC($1)/geo;
+    s/\[$ISBNPattern (.+)\]/&StoreISBN($1, $2)/geo;
     s/\b$ISBNPattern/&StoreISBN($1)/geo;
 
     if ($ThinLine) {
@@ -2402,9 +2403,9 @@ sub UploadLink {
 }
 
 sub StoreISBN {
-  my ($num) = @_;
+  my ($num, $title) = @_;
 
-  return &StoreRaw(&ISBNLink($num));
+  return &StoreRaw(&ISBNLink($num, $title));
 }
 
 sub ISBNALink {
@@ -2414,7 +2415,7 @@ sub ISBNALink {
 }
 
 sub ISBNLink {
-  my ($rawnum) = @_;
+  my ($rawnum, $title) = @_;
   my ($rawprint, $html, $num, $numSites, $i);
 
   $num = $rawnum;
@@ -2425,7 +2426,7 @@ sub ISBNLink {
   if ((length($num) != 10) || ($numSites < 1)) {
     return "ISBN $rawnum";
   }
-  $html = &ISBNALink($num, $IsbnPre[0], $IsbnPost[0], 'ISBN ' . $rawprint);
+  $html = &ISBNALink($num, $IsbnPre[0], $IsbnPost[0], $title || $rawprint);
   if ($numSites > 1) {
     $html .= ' (';
     $i = 1;
