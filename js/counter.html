@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Counter test</title>
+<script type="text/javascript" src="counter.js"></script>
+</head>
+<body>
+<h1>Counter Test</h1>
+<div style="font-style: serif; font-size: 90%; font-style: italic; width: 12em; padding-left: 2em; background-color: #EEEEEE">
+Animals slaughtered in the last <span id="timespan">0</span> seconds (U.S.)
+<table>
+ <tr><td>cows</td> <td id="cows"></td></tr>
+ <tr><td>pigs</td> <td id="pigs"></td></tr>
+ <tr><td>chickens</td><td id="chickens"></td></tr>
+ <tr><td>sheep</td> <td id="sheep"></td></tr>
+ <tr><td>turkeys</td> <td id="turkeys"></td></tr>
+ <!-- <tr><td>ducks</td> <td id="ducks"></td></tr> -->
+</table>
+</div>
+<script language=JavaScript>
+// constants
+var yr2sec = 365*24*60*60;
+
+// numbers from usda literature
+var beefcows_yr  =    2521798;
+var dairycows_yr =    2252776;
+var pigs_yr      =  102501065;
+var sheep_yr	 =     129062;
+var lambs_yr     =    2425582;
+var calves_yr    =     717338;
+var bison_yr     =      28198;
+var chickens_yr  = 8351180000;
+var hens_yr 	 =  140509000;
+var chicks_yr    =  218588500;
+var turkeys_yr 	 =     235958;
+var ducks_yr     =     502*52;
+
+new Counter("timespan",  0, 1, 1000);
+
+// total body count
+new Counter("cows",      0, ((beefcows_yr+dairycows_yr+calves_yr)/yr2sec), 1000);
+new Counter("pigs",      0, (pigs_yr/yr2sec), 1000);
+new Counter("chickens",  0, ((chickens_yr+hens_yr)/yr2sec), 1000);
+new Counter("turkeys",   0, (turkeys_yr/yr2sec), 1000);
+new Counter("sheep",     0, ((sheep_yr+lambs_yr)/yr2sec), 1000);
+//new Counter("ducks",     0, ((ducks_yr)/yr2sec), 1000);
+</script>
+<hr>
+<address>
+<!-- hhmts start --> Last modified: Fri Mar 16 16:12:51 Pacific Daylight Time 2007 <!-- hhmts end -->
+</address>
+</body> </html>
