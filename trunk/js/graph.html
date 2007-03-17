@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>graph test</title>
+<script type="text/javascript" src="wz_jsgraphics.js"></script>
+<script type="text/javascript" src="SignificantFigures.js"></script>
+<script type="text/javascript" src="graph.js"></script>
+</head>
+<body>
+<h1>testing graphics</h1>
+<p>how to draw graphs in javascript</p>
+
+<table>
+  <tr>
+    <td>
+      <div id="graph" style="position:relative; width: 300px; height: 200px;"></div>
+    </td>
+    <td style="width: 100%">
+      Debug Log:<br/>
+      <div id="log" style="border: 1px solid black; overflow: scroll; height: 20ex;"></div>
+    </td>
+  </tr>
+</table>
+<div id=controls></div>
+<script type="text/javascript">
+var jg = new oGraph("graph");
+jg.setLog("log", 5);
+for (var i = -5; i <= 5; i++)
+{
+  jg.addPoint(0, i, i);
+  jg.addPoint(1, i, 2*Math.sin(i));
+  jg.addPoint(2, i, i*i*.3-3);
+}
+jg.plot();
+jg.graphControls("jg", "controls");
+</script>
+<form action="">
+  Series:<select name="series">
+    <option value=0>0</option><option value=1>1</option><option value=2>2</option></select>
+  X: <input name="x" type="text" size="5">
+  Y: <input name="y" type="text" size="5">
+  <input type="button" value="Add Point"
+   onclick="jg.addPoint(document.forms[0].series.value, document.forms[0].x.value, document.forms[0].y.value); jg.plot();">
+  <p/>
+</form>
+<hr>
+<address></address>
+<!-- hhmts start --> Last modified: Tue Sep 19 13:17:11 Pacific Daylight Time 2006 <!-- hhmts end -->
+</body> </html>

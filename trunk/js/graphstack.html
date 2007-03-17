@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Stacked Graph Test</title>
+<script type="text/javascript" src="wz_jsgraphics.js"></script>
+<script type="text/javascript" src="SignificantFigures.js"></script>
+<script type="text/javascript" src="graph.js"></script>
+</head>
+
+<body>
+<h1>Stacked Graph Test</h1>
+
+<div id="t1" style="position:relative; width: 300px; height: 200px;"></div>
+<script type="text/javascript">
+var dataset = new Array();
+dataset[0] = {px:new Array(1,  3,4,5,6,7  ),
+              py:new Array(2,  2,2,2,2,2  )};
+dataset[1] = {px:new Array(1,  3,4,  6,7,8),
+              py:new Array(1,  2,3,  3,3,4)};
+dataset[2] = {px:new Array(  2,3,4,5,6,7,8),
+              py:new Array(  3,2,1,1,1,2,2)};
+dataset[3] = {px:new Array(1,2,3,4,5,    8),
+              py:new Array(1,1,1,1,1,    1)};
+
+var jg = new oGraph("t1");
+jg.addSet(0, dataset[0].px, dataset[0].py);
+jg.addSet(1, dataset[1].px, dataset[1].py);
+jg.addSet(2, dataset[2].px, dataset[2].py);
+jg.addSet(3, dataset[3].px, dataset[3].py);
+jg.enableSet(0,0);
+jg.drawPoints=0;
+jg.minYgraph=0;
+jg.stackGraph = 1;
+jg.plot();
+</script>
+
+<hr>
+<address></address>
+<!-- hhmts start --> Last modified: Tue Sep 19 13:44:12 Pacific Daylight Time 2006 <!-- hhmts end -->
+</body> </html>
