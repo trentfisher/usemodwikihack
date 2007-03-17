@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Time-Series Graph Tests</title>
+<script type="text/javascript" src="wz_jsgraphics.js"></script>
+<script type="text/javascript" src="SignificantFigures.js"></script>
+<script type="text/javascript" src="graph.js"></script>
+<script type="text/javascript">
+var series1 = new Array(282.7,282.7,282.7,282.7,282.7,282.7,282.7,282.7,282.7,282.7,282.7);
+var series2 = new Array(210.567152,211.131680,228.267496,282.760200,281.497368,265.472216,226.793352,232.478080,232.304360,229.907864,193.027304);
+function mkTime(st, incr)
+{
+    var t = new Array();
+    for (var i = 0; i < series1.length; i++) { t[i] = st + i*incr; }
+    return t;
+}
+</script>
+</head>
+<body>
+<h1>Time-Series Graph Tests</h1>
+
+<h2>5 Min Data</h2>
+<div id="t1" style="position:relative; width: 300px; height: 200px;"></div>
+<script type="text/javascript">
+var jg = new oGraph("t1");
+jg.addSet(0, mkTime(1158175517, 5*MIN), series2);
+jg.timeSeries=1;
+jg.showGrid=1;
+jg.plot();
+</script>
+
+<h2>Hourly Data</h2>
+<div id="t2" style="position:relative; width: 300px; height: 200px;"></div>
+<script type="text/javascript">
+var jg = new oGraph("t2");
+jg.addSet(0, mkTime(1158175517, HOUR), series2);
+jg.timeSeries=1;
+jg.showGrid=1;
+jg.plot();
+</script>
+
+<h2>5 Hour Data</h2>
+<div id="t3" style="position:relative; width: 300px; height: 200px;"></div>
+<script type="text/javascript">
+var jg = new oGraph("t3");
+jg.addSet(0, mkTime(1158175517, 5*HOUR), series2);
+jg.timeSeries=1;
+jg.showGrid=1;
+jg.plot();
+</script>
+
+<h2>Daily Data (end weekend on boundary)</h2>
+<div id="t4" style="position:relative; width: 300px; height: 200px;"></div>
+<script type="text/javascript">
+var jg = new oGraph("t4");
+jg.addSet(0, mkTime(1158175517, DAY), series2);
+jg.timeSeries=1;
+jg.showGrid=1;
+jg.plot();
+</script>
+
+<h2>Daily Data (start weekend on boundary)</h2>
+<div id="t5" style="position:relative; width: 300px; height: 200px;"></div>
+<script type="text/javascript">
+var jg = new oGraph("t5");
+jg.addSet(0, mkTime(1158175517+3*DAY, DAY), series2);
+jg.timeSeries=1;
+jg.showGrid=1;
+jg.plot();
+</script>
+
+<h2>Weekly Data</h2>
+<div id="t6" style="position:relative; width: 300px; height: 200px;"></div>
+<script type="text/javascript">
+var jg = new oGraph("t6");
+jg.addSet(0, mkTime(1158175517, WEEK), series2);
+jg.timeSeries=1;
+jg.showGrid=1;
+jg.plot();
+</script>
+
+<hr>
+<address></address>
+<!-- hhmts start --> Last modified: Thu Sep 14 16:32:15 Pacific Daylight Time 2006 <!-- hhmts end -->
+</body> </html>
