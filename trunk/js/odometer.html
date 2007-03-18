@@ -2,10 +2,12 @@
 <html> <head>
 <title>Odometer test</title>
 <script type="text/javascript" src="odometer.js"></script>
+<script type="text/javascript" src="counter.js"></script>
 </head>
-<body onload='o = new Odometer("otest", 5, 2, 0)'>
+<body onload='o = new Odometer("otest", 5, 2, 0); new Counter("count", 0, 2, 500)'>
 <h1>Odometer test 2</h1>
 <div id="otest"></div>
+<div id="count"></div>
 <div id="log"><div>
 <hr>
 <address>
