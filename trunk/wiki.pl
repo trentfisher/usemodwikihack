@@ -1478,6 +1478,10 @@ sub GetHtmlHeader {
   unless (!$action or $action eq "rc" or $action eq "index") {
     $html .= "<META NAME='robots' CONTENT='noindex,nofollow'>\n";
   }
+  # include RSS headers
+  $html .= sprintf(qq(<link rel="%s" type="%s" title="%s" href="%s" />\n),
+                   "alternate", "application/rss+xml",
+                   $title." Recent Changes", $FullUrl."?action=rss");
   $stylesheet = &GetParam('stylesheet', $StyleSheet);
   $stylesheet = $StyleSheet  if ($stylesheet eq '');
   $stylesheet = ''  if ($stylesheet eq '*');  # Allow removing override
