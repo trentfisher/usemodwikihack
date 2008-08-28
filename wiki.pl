@@ -55,6 +55,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
   $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay $NoAnonyms
   $XSearchDisp $TopSearchBox $EditHelp $BackGotoBar $EditPageLink
+  $UserHeaderPrefix
   $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
@@ -113,6 +114,7 @@ $FavIcon     = '';              # URL of bookmark/favorites icon, or ''
 $RssDays     = 7;               # Default number of days in RSS feed
 $UserHeader  = '';              # Optional HTML header additional content
 $UserBody    = '';              # Optional <BODY> tag additional content
+$UserHeaderPrefix = '';         # extra stuff above the page title
 $StartUID    = 1001;            # Starting number for user IDs
 $UploadDir   = '';              # Full path (like /foo/www/uploads) for files
 $UploadUrl   = '';              # Full URL (like http://foo.com/uploads)
@@ -1021,7 +1023,7 @@ sub GetRssRcLine{
   $item = <<RSS ;
     <item rdf:about="$itemID">
         <title>$pagename</title>
-        <link>$pagePrefix$pagenameEsc</link>
+        <link>$diffPrefix$pagenameEsc</link>
         <description>$description</description>
         <dc:date>$date</dc:date>
         <dc:contributor>
@@ -1377,6 +1379,7 @@ sub GetHeader {
   return $result  if ($embed);
 
   $result .= '<div class=wikiheader>';
+  $result .= $UserHeaderPrefix if $UserHeaderPrefix;
   # add start of search form, to keep logo and search box on same line
   if ($TopSearchBox)
   {
