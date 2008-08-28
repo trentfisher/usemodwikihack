@@ -1031,6 +1031,7 @@ sub GetRssRcLine{
                 <rdf:value>$author</rdf:value>
             </rdf:Description>
         </dc:contributor>
+        <dc:creator>$author</dc:creator>
         <wiki:status>$status</wiki:status>
         <wiki:importance>$importance</wiki:importance>
         <wiki:diff>$diffPrefix$pagenameEsc</wiki:diff>
