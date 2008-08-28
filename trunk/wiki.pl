@@ -1953,7 +1953,17 @@ sub CommonMarkup {
       s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
     }
     if ($TableMode) {
-      s/((\|\|)+)/"<\/TD><TD COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
+      s/((\|\|)+)/"<\/td><td colspan=\"" . (length($1)\/2) . "\">"/ge;
+      # this code will align the contents of a cell to the left right or
+      # center depending on double spaces in front of or behind the contents
+      # this patch is from Isak Johnsson, near the bottom of this page:
+      # http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/TableSyntax
+      my %alignments = (',',      '',
+			',  ',    ' align="left"',
+			'  ,',    ' align="right"',
+			'  ,  ',  ' align="center"',
+			);
+      s/<td(.*?)>(  )?(.*?)(  )?<\/td>/"<td".($alignments{"$2,$4"})."$1>$3<\/td>"/gei;
     }
   }
 
