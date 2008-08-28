@@ -2051,7 +2051,7 @@ sub WikiLinesToHtml {
     if ($TableSyntax)
     {
       # doctor up the table cells
-      s(<TD(.*?)>\s*=+\s*(.*?)\s*=+\s*</TD>)(<TH$1>$2</TH>)g;
+      s(<TD(.*?)>\s*=+\s*(.*?)\s*=+\s*</TD>)(<th$1>$2</th>)gi;
     }
     $pageHtml .= $_;
   }
