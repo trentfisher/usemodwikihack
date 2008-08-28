@@ -1012,11 +1012,10 @@ sub GetRssRcLine{
   }
   $status = (1 == $revision) ? 'new' : 'updated';
   $importance = $isEdit ? 'minor' : 'major';
-  $timestamp += $TimeZoneOffset;
-  my ($sec, $min, $hour, $mday, $mon, $year) = localtime($timestamp);
+  my ($sec, $min, $hour, $mday, $mon, $year) = gmtime($timestamp);
   $year += 1900;
   $date = sprintf("%4d-%02d-%02dT%02d:%02d:%02d+%02d:00",
-    $year, $mon+1, $mday, $hour, $min, $sec, $TimeZoneOffset/(60*60));
+    $year, $mon+1, $mday, $hour, $min, $sec);
   $pagename = &QuoteHtml($pagename);
   # Write it out longhand
   $item = <<RSS ;
