@@ -53,9 +53,7 @@ use vars qw(@RcDays @HtmlPairs @HtmlSingle
   @IsbnNames @IsbnPre @IsbnPost $EmailFile $FavIcon $RssDays $UserHeader
   $UserBody $StartUID $ParseParas $AuthorFooter $UseUpload $AllUpload
   $UploadDir $UploadUrl $LimitFileUrl $MaintTrimRc $SearchButton 
-  $SpambotPoison @SpambotDatafiles $SelfBan $SpamDelay $NoAnonyms
-  $XSearchDisp $TopSearchBox $EditHelp $BackGotoBar $EditPageLink
-  $EditNameLink $UseMetaWiki @ImageSites $BracketImg $helpImage);
+  $EditNameLink $UseMetaWiki @ImageSites $BracketImg );
 # Note: $NotifyDefault is kept because it was a config variable in 0.90
 # Other global variables:
 use vars qw(%Page %Section %Text %InterSite %SaveUrl %SaveNumUrl
@@ -67,7 +65,7 @@ use vars qw(%Page %Section %Text %InterSite %SaveUrl %SaveNumUrl
   $ConfigError $UploadPattern );
 
 # == Configuration =====================================================
-$DataDir     = "/vobs/cmweb/htdocs/wiki"; # Main wiki directory
+$DataDir     = "/tmp/mywikidb"; # Main wiki directory
 $UseConfig   = 1;       # 1 = use config file,    0 = do not look for config
 $ConfigFile  = "$DataDir/config";   # Configuration file
 
@@ -90,16 +88,13 @@ $EditPass    = "";              # Like AdminPass, but for editing only
 $StyleSheet  = "";              # URL for CSS stylesheet (like "/wiki.css")
 $NotFoundPg  = "";              # Page for not-found links ("" for blank pg)
 $EmailFrom   = "Wiki";          # Text for "From: " field of email notes.
-$SendMail    = "/usr/lib/sendmail";  # Full path to sendmail executable
+$SendMail    = "/usr/sbin/sendmail";  # Full path to sendmail executable
 $FooterNote  = "";              # HTML for bottom of every page
-$EditHelp    = "";              # HTML notice/CODE above textarea on edit page
-$EditNote    = "";              # HTML notice/CODE above buttons on edit page
+$EditNote    = "";              # HTML notice above buttons on edit page
 $MaxPost     = 1024 * 210;      # Maximum 210K posts (about 200K for pages)
 $NewText     = "";              # New page text ("" for default message)
 $HttpCharset = "";              # Charset for pages, like "iso-8859-2"
 $UserGotoBar = "";              # HTML added to end of goto bar
-$BackGotoBar = 1;               # 1 = backlink link in goto bar, 0 = none
-$EditPageLink= 0;               # 1 = edit link at top of page, 0 = none
 $InterWikiMoniker = '';         # InterWiki moniker for this wiki. (for RSS)
 $SiteDescription  = $SiteName;  # Description of this wiki. (for RSS)
 $RssLogoUrl  = '';              # Optional image for RSS feed
@@ -129,7 +124,7 @@ $FreeLinks   = 1;           # 1 = use [[word]] links, 0 = LinkPattern only
 $WikiLinks   = 1;           # 1 = use LinkPattern,    0 = use [[word]] only
 $AdminDelete = 1;           # 1 = Admin only deletes, 0 = Editor can delete
 $RunCGI      = 1;           # 1 = Run script as CGI,  0 = Load but do not run
-$EmailNotify = 1;           # 1 = use email notices,  0 = no email on changes
+$EmailNotify = 0;           # 1 = use email notices,  0 = no email on changes
 $EmbedWiki   = 0;           # 1 = no headers/footers, 0 = normal wiki pages
 $DeletedPage = 'DeletedPage';   # 0 = disable, 'PageName' = tag to delete page
 $ReplaceFile = 'ReplaceFile';   # 0 = disable, 'PageName' = indicator tag
@@ -177,17 +172,9 @@ $AllUpload    = 0;      # 1 = anyone can upload,   0 = only editor/admins
 $LimitFileUrl = 1;      # 1 = limited use of file: URLs, 0 = no limits
 $MaintTrimRc  = 0;      # 1 = maintain action trims RC, 0 = only maintainrc
 $SearchButton = 0;      # 1 = search button on page, 0 = old behavior
-$XSearchDisp  = 1;      # 1 = extra output on search, 0 = normal search output
-$TopSearchBox = 1;      # 1 = search box at top right of page, 0 = nothing
 $EditNameLink = 0;      # 1 = edit links use name (CSS), 0 = '?' links
 $UseMetaWiki  = 0;      # 1 = add MetaWiki search links, 0 = no MW links
 $BracketImg   = 1;      # 1 = [url url.gif] becomes image link, 0 = no img
-$SpambotPoison= 0;      # 1 = add spambot poison to the page, 0 = no poison
-@SpambotDatafiles = (); # files containing lists of email addresses, usernames
-                        # and domain names, respectively
-$SelfBan      = "";     # if action is set to this, add to self to ban list
-$SpamDelay    = 0;      # seconds to delay before forbidding a spammer
-$NoAnonyms    = 0;      # 1 = editing only for users with a defined username
 
 # Names of sites.  (The first entry is used for the number link.)
 @IsbnNames = ('bn.com', 'amazon.com', 'search');
@@ -203,43 +190,31 @@ $NoAnonyms    = 0;      # 1 = editing only for users with a defined username
 # so they are *not* particularly "safe".
 # Tags that must be in <tag> ... </tag> pairs:
 @HtmlPairs = qw(b i u font big small sub sup h1 h2 h3 h4 h5 h6 cite code
-  em s strike strong tt var div center blockquote ol ul dl table caption marquee);
+  em s strike strong tt var div center blockquote ol ul dl table caption);
 # Single tags (that do not require a closing /tag)
 @HtmlSingle = qw(br p hr li dt dd tr td th);
 @HtmlPairs = (@HtmlPairs, @HtmlSingle);  # All singles can also be pairs
 
 # == You should not have to change anything below this line. =============
 $IndentLimit = 20;                  # Maximum depth of nested lists
+$PageDir     = "$DataDir/page";     # Stores page data
+$HtmlDir     = "$DataDir/html";     # Stores HTML versions
+$UserDir     = "$DataDir/user";     # Stores user data
+$KeepDir     = "$DataDir/keep";     # Stores kept (old) page data
+$TempDir     = "$DataDir/temp";     # Temporary files and locks
+$LockDir     = "$TempDir/lock";     # DB is locked if this exists
+$InterFile   = "$DataDir/intermap"; # Interwiki site->url map
+$RcFile      = "$DataDir/rclog";    # New RecentChanges logfile
+$RcOldFile   = "$DataDir/oldrclog"; # Old RecentChanges logfile
+$IndexFile   = "$DataDir/pageidx";  # List of all pages
+$EmailFile   = "$DataDir/emails";   # Email notification lists
 
-# define this as a function in case DataDir was defined in the config file
-sub setDirNames
-{
-    $PageDir     = "$DataDir/page";     # Stores page data
-    $HtmlDir     = "$DataDir/html";     # Stores HTML versions
-    $UserDir     = "$DataDir/user";     # Stores user data
-    $KeepDir     = "$DataDir/keep";     # Stores kept (old) page data
-    $TempDir     = "$DataDir/temp";     # Temporary files and locks
-    $LockDir     = "$TempDir/lock";     # DB is locked if this exists
-    $InterFile   = "$DataDir/intermap"; # Interwiki site->url map
-    $RcFile      = "$DataDir/rclog";    # New RecentChanges logfile
-    $RcOldFile   = "$DataDir/oldrclog"; # Old RecentChanges logfile
-    $IndexFile   = "$DataDir/pageidx";  # List of all pages
-    $EmailFile   = "$DataDir/emails";   # Email notification lists
-}
 if ($RepInterMap) {
   push @ReplaceableFiles, $InterFile;
 }
 
 # The "main" program, called at the end of this script file.
 sub DoWikiRequest {
-  {
-      # if there is a companion file with a "conf" suffix, use it
-      # as a config file
-      my $n = $0;
-      $n =~ s/\.\w+$/.conf/;
-      $ConfigFile = $n if -f $n;
-  }
-
   if ($UseConfig && (-f $ConfigFile)) {
     $ConfigError = '';
     if (!do $ConfigFile) {   # Some error occurred
@@ -254,7 +229,6 @@ sub DoWikiRequest {
       }
     }
   }
-  &setDirNames();
   &InitLinkPatterns();
   if (!&DoCacheBrowse()) {
     eval $BrowseCode;
@@ -420,7 +394,6 @@ $BrowseCode = ""; # Comment next line to always compile (slower)
 #$BrowseCode = <<'#END_OF_BROWSE_CODE';
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
-use Cwd;
 
 sub InitRequest {
   my @ScriptPath = split('/', "$ENV{SCRIPT_NAME}");
@@ -437,7 +410,7 @@ sub InitRequest {
     $q->charset($HttpCharset);
   }
   $Now = time;                     # Reset in case script is persistent
-  $ScriptName = pop(@ScriptPath) unless $ScriptName;  # Name used in links
+  $ScriptName = pop(@ScriptPath);  # Name used in links
   $IndexInit = 0;                  # Must be reset for each request
   $InterSiteInit = 0;
   %InterSite = ();
@@ -569,7 +542,6 @@ sub BrowsePage {
   $MainPage =~ s|/.*||;  # Only the main page name (remove subpage)
   $fullHtml = &GetHeader($id, &QuoteHtml($id), $oldId);
   if ($revision ne '') {
-    $fullHtml .= "<div class=wikidiff>\n";
     if (($revision eq $Page{'revision'}) || ($goodRevision ne '')) {
       $fullHtml .= '<b>' . Ts('Showing revision %s', $revision) . "</b><br>";
     } else {
@@ -588,22 +560,20 @@ sub BrowsePage {
   }
   $showDiff = &GetParam('diff', $allDiff);
   if ($UseDiff && $showDiff) {
-    $fullHtml .= "<div class=wikidiff>\n" if not $revision;
     $diffRevision = $goodRevision;
     $diffRevision = &GetParam('diffrevision', $diffRevision);
     # Eventually try to avoid the following keep-loading if possible?
     &OpenKeptRevisions('text_default')  if (!$openKept);
     $fullHtml .= &GetDiffHTML($showDiff, $id, $diffRevision,
                               $revision, $newText);
-    $fullHtml .= "<hr class=wikilinediff>";
+    $fullHtml .= "<hr class=wikilinediff>\n";
   }
-  $fullHtml .= "</div>\n";
   $fullHtml .= '<div class=wikitext>';
   $fullHtml .= &WikiToHTML($Text{'text'});
-  # force end of page past any images... both are needed due to IE bugs
-  #$fullHtml .= '<br style="clear:both"/>';
-  #$fullHtml .= '<p style="clear: both;"></p>';
   $fullHtml .= '</div>';
+  if (!&GetParam('embed', $EmbedWiki)) {
+    $fullHtml .= "<hr class=wikilinefooter>\n";
+  }
   if (($id eq $RCName) || (T($RCName) eq $id) || (T($id) eq $RCName)) {
     print $fullHtml;
     print '<div class=wikirc>';
@@ -612,9 +582,6 @@ sub BrowsePage {
     print "<hr class=wikilinefooter>\n"  if (!&GetParam('embed', $EmbedWiki));
     print &GetFooterText($id, $goodRevision);
     return;
-  }
-  if (!&GetParam('embed', $EmbedWiki)) {
-    $fullHtml .= "<hr class=wikilinefooter>\n";
   }
   $fullHtml .= &GetFooterText($id, $goodRevision);
   print $fullHtml;
@@ -813,7 +780,6 @@ sub GetRc {
   $headList = '';
   $result = '';
   @outrc = reverse @outrc if ($newtop);
-  my $totals = {};
   foreach $rcline (@outrc) {
     ($ts, $pagename, $summary, $isEdit, $host, $kind, $extraTemp)
       = split(/$FS3/, $rcline);
@@ -847,29 +813,10 @@ sub GetRc {
                          $extra{'id'}, $summary, $isEdit,
                          $pagecount{$pagename}, $extra{'revision'},
                          $tEdit, $tDiff, $tChanges, $all, $rcchangehist);
-      my $author = ($extra{'name'} || $host);
-
-      $totals->{userchg}{$author}++;
-      $totals->{usernew}{$author}++ if $extra{'revision'} == 1;
-      $totals->{chg}++;
-      $totals->{new}++ if $extra{'revision'} == 1;
     }
   }
   if (1 == $rcType) {
     $result .= "</UL>\n"  if ($inlist);  # Close final tag
-    # summary of changes
-    $result .= "<table class=wikitable>\n";
-    $result .= "<tr><th colspan=3>Totals by user</th></tr>\n";
-    $result .= "<tr><th>User</th><th>New pages</th><th>Changes</th></tr>\n";
-    foreach my $u (sort keys %{$totals->{userchg}})
-    {
-        $result .= sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n",
-                           $u, $totals->{usernew}{$u} || 0,
-                           $totals->{userchg}{$u} || 0);
-    }
-    $result .= sprintf("<tr><th>%s</th><td>%s</td><td>%s</td></tr>\n",
-                       "total", $totals->{new}||0, $totals->{chg}||0);
-    $result .= "</table>\n";
   }
   return ($headList, $result);  # Just ignore headList for HTML
 }
@@ -915,8 +862,6 @@ sub GetHtmlRcLine {
   if ($UseDiff && &GetParam("diffrclink", 1)) {
     $link .= &ScriptLinkDiff(4, $pagename, $tDiff, "") . "  ";
   }
-  $link .= (1 == $revision ? "<strong>N</strong> " : "");   # mark new pages
-  #$link .= ($isEdit ? "<strong>m</strong>" : "");  # mark minor edits
   $link .= &GetPageLink($pagename);
   $html .= "<li>$link ";
   $html .=  &CalcTime($timestamp) . " $count$edit" . " $sum";
@@ -1040,13 +985,12 @@ sub DoHistory {
   my ($id) = @_;
   my ($html, $canEdit, $row, $newText);
 
-  print &GetHeader('', Ts('History of %s', $id), '');
+  print &GetHeader('', Ts('History of %s', $id), '') . '<br>';
   &OpenPage($id);
   &OpenDefaultText();
   $newText = $Text{'text'};
   $canEdit = 0;
   $canEdit = &UserCanEdit($id)  if ($HistoryEdit);
-  print "<div class=wikihist><br/>\n";
   if ($UseDiff) {
     print <<EOF ;
       <form action='$ScriptName' METHOD='GET'>
@@ -1070,7 +1014,6 @@ EOF
     print "<hr class=wikilinediff>\n";
     print &GetDiffHTML(&GetParam('defaultdiff', 1), $id, '', '', $newText);
   }
-  print "</div>\n";
   print &GetCommonFooter();
 }
 
@@ -1257,8 +1200,8 @@ sub GetPageOrEditLink {
 }
 
 sub GetBackLinksSearchLink {
-  my ($id) = shift;
-  my $name = shift || $id;
+  my ($id) = @_;
+  my $name = $id;
 
   $id =~ s|.+/|/|;   # Subpage match: search for just /SubName
   if ($FreeLinks) {
@@ -1293,15 +1236,7 @@ sub ScriptLinkDiffRevision {
 }
 
 sub GetUploadLink {
-  my $id = shift;
-  my $name = shift || T('Upload');
-
-  if ($FreeLinks) {
-    $id = &FreeToNormal($id);
-    $name =~ s/_/ /g;
-  }
-
-  return &ScriptLink('action=upload'.($id ? '&id='.$id : ""), $name);
+  return &ScriptLink('action=upload', T('Upload'));
 }
 
 sub ScriptLinkTitle {
@@ -1360,53 +1295,24 @@ sub GetHeader {
   return $result  if ($embed);
 
   $result .= '<div class=wikiheader>';
-  # add start of search form, to keep logo and search box on same line
-  if ($TopSearchBox)
-  {
-      $result .= ("<div style=\"text-align: right\">".
-                  $q->startform(-method => "POST"));
+  if ($oldId ne '') {
+    $result .= $q->h3('(' . Ts('redirected from %s', 
+                               &GetEditLink($oldId, $oldId)) . ')');
   }
   if ((!$embed) && ($LogoUrl ne "")) {
     $logoImage = "img src=\"$LogoUrl\" alt=\"$altText\" border=0";
     if (!$LogoLeft) {
       $logoImage .= " align=\"right\"";
     }
-    else
-    {
-      $logoImage .= " align=\"left\"";
-    }
-    #$helpImage = "img src=\"$LogoUrl\" alt=\"Help\" border=0 align=\"right\"";
-    $result .= &ScriptLink($HomePage, "<$logoImage>")."\n";
-    #$result .= "<a href=\"http://www.usemod.com/cgi-bin/wiki.pl\"><img src=\"/dbawiki/oracle.gif\" alt=\"Help\" border=0 align=\"right\"></a>";
-  }
-  # force a search form at the top of the page
-  if ($TopSearchBox)
-  {
-      $result .= ($q->textfield(-name=>'search', -size=>20).
-                  $q->submit('dosearch', T('search')).
-                  $q->endform . "</div>\n");
-  }
-
-  my $redirtext;
-  if ($oldId ne '') {
-      # fix the class name in this link
-      my $l = &GetEditLink($oldId, $oldId);;
-      $l =~ s/class=\w+/class=wikiredirect/;
-      $redirtext = $q->span({class => "wikiredirect"},
-                            ' (' . Ts('redirected from %s', $l . ')'));
+    $header = &ScriptLink($HomePage, "<$logoImage>");
   }
   if ($id ne '') {
-    $result .= "  ".$q->h1({class => "wikiheader"},
-                           &GetBackLinksSearchLink($id).$redirtext);
+    $result .= $q->h1($header . &GetBackLinksSearchLink($id));
   } else {
-    # this is for built-in pages (no backlinks)
-    $result .= $q->h1({class => "wikiheader"}, $title);
+    $result .= $q->h1($header . $title);
   }
-  $result .= "\n";
   if (&GetParam("toplinkbar", 1)) {
-    $result .= '<div class=wikiheaderlinkbar>';
     $result .= &GetGotoBar($id) . "<hr class=wikilineheader>";
-    $result .= '</div>';
   }
   $result .= '</div>';
   return $result;
@@ -1452,23 +1358,6 @@ sub GetHtmlHeader {
       $keywords =~ s/([a-z])([A-Z])/$1, $2/g;
       $html .= "<META NAME='KEYWORDS' CONTENT='$keywords'/>\n" if $keywords;
   }
-
-  # if we don't want robots indexing our history pages
-  {
-      my $action = lc(&GetParam('action', ''));
-
-      if ($action eq "" ||                            # regular page browse
-          $action eq "rc" ||                          # recent changes
-          $action eq "index")                         # page list
-      {
-          $html .= "<META NAME='robots' CONTENT='index,follow'/>\n";
-      }
-      else
-      {
-          $html .= "<META NAME='robots' CONTENT='noindex,nofollow'/>\n";
-      }
-  }
-
   if ($SiteBase ne "") {
     $html .= qq(<BASE HREF="$SiteBase">\n);
   }
@@ -1554,84 +1443,8 @@ sub GetFooterText {
     $result .= T($FooterNote);
   }
   $result .= '</div>';
-  $result .= &GetSpambotPoison() if $SpambotPoison;
   $result .= &GetMinimumFooter();
   return $result;
-}
-
-# generate a fake guestbook with generated email addresses
-# to poison spammers email lists
-sub GetSpambotPoison {
-  my $num_addresses = 2 + int (rand 16);
-  my @randaddr = ReadRandomLines($SpambotDatafiles[0], $num_addresses);
-  my @randuser = ReadRandomLines($SpambotDatafiles[1], $num_addresses*2);
-  my @randhost = ReadRandomLines($SpambotDatafiles[2], $num_addresses);
-
-  my $result = "\n<div id=guestbook><h1>Guestbook</h1>\n";
-  for (1..$num_addresses) {
-    my $email_addr;
-    my $addrtype = int(rand(5));
-    # verbatim address
-    if ($addrtype == 0 and @randaddr) {
-        $email_addr = pop(@randaddr);
-    }
-    # user@host
-    elsif ($addrtype == 1 and @randuser and @randhost) {
-        $email_addr = pop(@randuser).'@'.pop(@randhost);
-    }
-    # userN@host
-    elsif ($addrtype == 2 and @randuser and @randhost) {
-        $email_addr = pop(@randuser).int(rand(9999)).'@'.pop(@randhost);
-    }
-    # user.user@host
-    elsif ($addrtype == 3 and @randuser and @randhost) {
-        $email_addr = pop(@randuser).'.'.pop(@randuser).'@'.pop(@randhost);
-    }
-    # useruser@host
-    elsif ($addrtype == 4 and @randuser and @randhost) {
-        $email_addr = pop(@randuser).pop(@randuser).'@'.pop(@randhost);
-    }
-    # useruserN@host
-    elsif ($addrtype == 5 and @randuser and @randhost) {
-        $email_addr = pop(@randuser).pop(@randuser).int(rand(9999)).
-                      '@'.pop(@randhost);
-    }
-    else {
-        # this shouldn't happen
-        next;
-    }
-
-    $result .= "<A HREF=\"mailto:$email_addr\">$email_addr</A><BR/>\n";
-  }
-  $result .= "</div>\n";
-  return $result;
-}
-
-# get 'n' random lines from a given file
-sub ReadRandomLines {
-    my $file = shift;
-    my $wanted = shift;
-
-    my $fsize = (stat($file))[7];
-    unless (open(F, $file))
-    {
-        warn "Error: cannot read $file: $!\n";
-        return ();
-    }
-    my @ret;
-    foreach my $i (1..$wanted)
-    {
-        my $pos = int(rand($fsize-5));
-        $pos = 0 if $pos < 0;
-        seek(F, $pos, 0);
-        my $j;
-        $j = <F> if $pos != 0;  # discard partial line
-        $j = <F>;
-        redo if not $j; # this indicates we hit eof
-        chomp $j;
-        push @ret, $j;
-    }
-    return @ret;
 }
 
 sub GetCommonFooter {
@@ -1652,7 +1465,7 @@ sub GetMinimumFooter {
 }
 
 sub GetFormStart {
-  return $q->startform("POST", "$ScriptName".($SlashLinks ? "/" : ""),
+  return $q->startform("POST", "$ScriptName",
                        "application/x-www-form-urlencoded");
 }
 
@@ -1667,29 +1480,12 @@ sub GetGotoBar {
     $bartext .= " | " . &GetPageLink($main);
   }
   $bartext .= " | " . &GetPageLink($RCName);
-  $bartext .= " | " . &GetBackLinksSearchLink($id, "What links here")
-      if $BackGotoBar and $id;
   $bartext .= " | " . &GetPrefsLink();
   if ($UseUpload && &UserCanUpload()) {
     $bartext .= " | " . &GetUploadLink();
   }
   if (&GetParam("linkrandom", 0)) {
     $bartext .= " | " . &GetRandomLink();
-  }
-  # optional: add edit link in top goto bar
-  if (&UserCanEdit($id, 0) and $EditPageLink and $id)
-  {
-    my $revision = &GetParam('revision', '');
-    if ($revision ne '')
-    {
-      $bartext .= " | " .
-          &GetOldPageLink('edit', $id, $revision,
-                          Ts('Edit rev %s of Page', $revision));
-    }
-    else
-    {
-      $bartext .= " | " . &GetEditLink($id, T('Edit Page'));
-    }
   }
   if ($UserGotoBar ne '') {
     $bartext .= " | " . $UserGotoBar;
@@ -1707,8 +1503,6 @@ sub GetSearchForm {
   } else {  
     $result .= &GetHiddenValue("dosearch", 1);
   }
-  # add a seach help link
-  $result .= " ". &GetPageLink("SearchHelp");
   return $result;
 }
 
@@ -1787,10 +1581,8 @@ sub WikiToHTML {
         s/\&lt;pre\&gt;((.|\n)*?)\&lt;\/pre\&gt;/&StorePre($1, "pre")/ige;
     $pageText =~
         s/\&lt;code\&gt;((.|\n)*?)\&lt;\/code\&gt;/&StorePre($1, "code")/ige;
-    $pageText =~ s/((.|\n)+?\n)\s*\n/&ParseParagraph($1)/geo or
-        $pageText =~ s/((.|\n)+?\n)\s*$/&ParseParagraph($1)/geo;
-    # bugfix: enclose $1 in quotes to prevent it from getting clobbered
-    $pageText =~ s/(.*)<\/p>(.+)$/"$1".&ParseParagraph($2)/seo;
+    $pageText =~ s/((.|\n)+?\n)\s*\n/&ParseParagraph($1)/geo;
+    $pageText =~ s/(.*)<\/p>(.+)$/$1.&ParseParagraph($2)/seo;
   } else {
     $pageText = &CommonMarkup($pageText, 1, 0);   # Multi-line markup
     $pageText = &WikiLinesToHtml($pageText);      # Line-oriented markup
@@ -1799,7 +1591,7 @@ sub WikiToHTML {
     pop @HeadingNumbers;
     $TableOfContents .= "</dd></dl>\n\n";
   }
-  $pageText =~ s/&lt;toc&gt;/<div class=toc><h4>Table of Contents<\/h4>$TableOfContents<\/div>/gi;
+  $pageText =~ s/&lt;toc&gt;/$TableOfContents/gi;
   if ($LateRules ne '') {
     $pageText = &EvalLocalRules($LateRules, $pageText, 0);
   }
@@ -1809,9 +1601,6 @@ sub WikiToHTML {
 sub CommonMarkup {
   my ($text, $useImage, $doLines) = @_;
   local $_ = $text;
-
-  # plugin extension... do this before any markup!
-  s/{{([\w]+)(.*?)}}/&StorePlugin($1, $2)/geo;
 
   if ($doLines < 2) { # 2 = do line-oriented only
     # The <nowiki> tag stores text with no markup (except quoting HTML)
@@ -1854,27 +1643,15 @@ sub CommonMarkup {
       s/\[$InterLinkPattern\s+([^\]]+?)\]/&StoreBracketInterPage($1, $2,
                                                              $useImage)/geos;
       if ($WikiLinks && $BracketWiki) {  # Local bracket-links
-         s/\[$LinkPattern\s+([^\]]+?)\]/&StorePageOrEditLink($1, $2)/geos;
-# changed to above so that links to unknown pages would show up right -- taf
-#        s/\[$LinkPattern\s+([^\]]+?)\]/&StoreBracketLink($1, $2)/geos;
+        s/\[$LinkPattern\s+([^\]]+?)\]/&StoreBracketLink($1, $2)/geos;
         s/\[$AnchoredLinkPattern\s+([^\]]+?)\]/&StoreBracketAnchoredLink($1,
                                                $2, $3)/geos if $NamedAnchors;
       }
     }
-
     s/\[$UrlPattern\]/&StoreBracketUrl($1, "", 0)/geo;
     s/\[$InterLinkPattern\]/&StoreBracketInterPage($1, "", 0)/geo;
     s/\b$UrlPattern/&StoreUrl($1, $useImage)/geo;
     s/\b$InterLinkPattern/&StoreInterPage($1, $useImage)/geo;
-    if ($UseUpload) {
-      s/$UploadPattern/&StoreUpload($1)/geo;
-      s/\[+([Ii]mage:.+?\.$ImageExtensions)\s+([^\]]+)?\]+/&StoreImage($1, $3)/geo;
-      s/\[+([Ii]mage:.+?\.$ImageExtensions)\s*\]+/&StoreImage($1)/geo;
-      s/\b([Ii]mage:.+?\.$ImageExtensions)\b/&StoreImage($1)/geo;
-      # this is a special format to introduce a break to stop text flow
-      # around an image (twice for IE bugs)
-      s(\b[Ii]mage:break\b)(<br clear=all><BR clear=all>)go;
-    }
     if ($WikiLinks) {
       s/$AnchoredLinkPattern/&StoreRaw(&GetPageOrEditAnchoredLink($1,
                              $2, ""))/geo if $NamedAnchors;
@@ -1884,39 +1661,32 @@ sub CommonMarkup {
     }
     s/\b$RFCPattern/&StoreRFC($1)/geo;
     s/\b$ISBNPattern/&StoreISBN($1)/geo;
-
+    if ($UseUpload) {
+      s/$UploadPattern/&StoreUpload($1)/geo;
+    }
     if ($ThinLine) {
       if ($OldThinLine) {  # Backwards compatible, conflicts with headers
-        s/^====+/<hr noshade class=wikiline size=2>/g;
+        s/====+/<hr noshade class=wikiline size=2>/g;
       } else {             # New behavior--no conflict
-        s/^------+/<hr noshade class=wikiline size=2>/g;
+        s/------+/<hr noshade class=wikiline size=2>/g;
       }
-      s/^----+/<hr noshade class=wikiline size=1>/g;
+      s/----+/<hr noshade class=wikiline size=1>/g;
     } else {
-      s/^----+/<hr class=wikiline>/g;
+      s/----+/<hr class=wikiline>/g;
     }
   }
-
   if ($doLines) { # 0 = no line-oriented, 1 or 2 = do line-oriented
     # The quote markup patterns avoid overlapping tags (with 5 quotes)
     # by matching the inner quotes for the strong pattern.
-    s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;    #'# for emacs
+    s/('*)'''(.*?)'''/$1<strong>$2<\/strong>/g;
     s/''(.*?)''/<em>$1<\/em>/g;
-    if (/^\S/)  # only do strike-through in non-preformated sections
-    {
-        s/[^-]--([^\s-].*?[^\s-])--[^-]/<strike>$1<\/strike>/g or
-            s/^--([^\s-].*?[^\s-])--[^-]/<strike>$1<\/strike>/g or
-            s/[^-]--([^\s-].*?[^\s-])--$/<strike>$1<\/strike>/g or
-            s/^--([^\s-].*?[^\s-])--$/<strike>$1<\/strike>/g
-    }
     if ($UseHeadings) {
-      s/(^|\n)\s*(\=+)\s*(\#)?\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $4, $3)/geo;
+      s/(^|\n)\s*(\=+)\s+([^\n]+)\s+\=+/&WikiHeading($1, $2, $3)/geo;
     }
     if ($TableMode) {
       s/((\|\|)+)/"<\/TD><TD COLSPAN=\"" . (length($1)\/2) . "\">"/ge;
     }
   }
-
   return $_;
 }
 
@@ -1941,23 +1711,15 @@ sub WikiLinesToHtml {
     } elsif (s/^(\*+)/<li>/) {
       $code = "UL";
       $depth = length $1;
-    # from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/OrderedListNumbering
-    } elsif (s/^(\#+)(\d*)([aAiI]?)/'<li' . ($2 ? " VALUE=\"$2\"" : '') . '>'/e) {
-
+    } elsif (s/^(\#+)/<li>/) {
       $code = "OL";
       $depth = length $1;
-      if ($3) {
-        $codeAttributes = "TYPE=\"$3\"";
-      }
-      else
-      {
-        $codeAttributes = 'TYPE="'.qw(1 A a I i)[$depth-1].'" ';
-      }
     } elsif ($TableSyntax &&
-             s/^((\|\|)+)(.*)\|\|\s*$/"<TR><TD colspan='"
+             s/^((\|\|)+)(.*)\|\|\s*$/"<TR VALIGN='CENTER' "
+                                      . "ALIGN='CENTER'><TD colspan='"
                                . (length($1)\/2) . "'>$3<\/TD><\/TR>\n"/e) {
       $code = 'TABLE';
-      $codeAttributes = "class=wikitable";
+      $codeAttributes = "BORDER='1'";
       $TableMode = 1;
       $depth = 1;
     } elsif (/^[ \t].*\S/) {
@@ -1986,14 +1748,7 @@ sub WikiLinesToHtml {
     if (!$ParseParas) {
       s/^\s*$/<p>\n/;                      # Blank lines become <p> tags
     }
-    $_ = &CommonMarkup($_, 1, 2);  # Line-oriented common markup
-    # if we are doing tables, tweak the cells that should be headers
-    if ($TableSyntax)
-    {
-      # doctor up the table cells
-      s(<TD(.*?)>\s*=+\s*(.*?)\s*=+\s*</TD>)(<TH$1>$2</TH>)g;
-    }
-    $pageHtml .= $_;
+    $pageHtml .= &CommonMarkup($_, 1, 2);  # Line-oriented common markup
   }
   while (@htmlStack > 0) {       # Clear stack
     $pageHtml .=  "</" . pop(@htmlStack) . ">\n";
@@ -2155,124 +1910,6 @@ sub StoreUrl {
   return $link . $extra;
 }
 
-# deal with plugin "links"
-sub StorePlugin
-{
-    my $name = shift;
-    my $paramstr = shift;
-    my @out;
-
-    # parse args
-    my %params = ();
-    while ($paramstr)
-    {
-        $paramstr =~ s/^\s+//;
-        # param=value
-        if ($paramstr =~ s/(\w+)\s*=\s*\"(.*?)\"// or
-            $paramstr =~ s/(\w+)\s*=\s*\'(.*?)\'// or
-            $paramstr =~ s/(\w+)\s*=\s*(\S+)//)
-        {
-            $params{$1} = $2;
-        }
-        # value... pick a numbered key
-        elsif ($paramstr =~ s/\"(.*?)\"// or
-               $paramstr =~ s/\'(.*?)\'// or
-               $paramstr =~ s/(\S+)//)
-        {
-            my $k = 0;
-            $k++ while (exists $params{$k});
-            $params{$k} = $1;
-        }
-        else
-        {
-            # stop processing, gunk in the param line
-            last;
-        }
-    }
-
-    if (-f "$DataDir/plugin/$name.pl")
-    {
-        my $savedir = cwd();
-        chdir $DataDir ||
-            warn "Error: chdir $DataDir failed (should not happen)";
-        eval { require "$DataDir/plugin/$name.pl"; };
-        warn "Error: plugin $name load: $@\n" if $@;
-        my $funcref = \&{$name};
-        @out = eval { &$funcref(%params) };
-        warn "Error: plugin $name eval: $@\n" if $@;
-        chdir $savedir ||
-            warn "Error: chdir $savedir failed (should not happen)";
-    }
-    else
-    {
-        return "<em>plugin $name missing</em>";
-    }
-
-    return &StoreRaw(join("\n", @out));
-}
-
-# from CWICK... with much hacking by trent
-# at this point it's more *inspired* by CWICK.
-sub StoreImage {
-  my $name = shift;
-  my $alt = shift;
-  my $id        =  $OpenPageName;
-  my $leftChar  =  substr( $id, 0, 1 );  # for indexing
-  my $attr      =  "";
-  my ( $link, $target, $len );
-
-  # first break up the image format
-  my ($tag, $param, $caption, $imgName);
-  # captions are not supported
-  if ($name =~ m(^[Ii]mage:(\w*):(\w*):(.+\.$ImageExtensions\z)))
-  {
-      ($param, $caption, $imgName) = ($1, $2, $3);
-  }
-  elsif ($name =~ m(^[Ii]mage:(\w*):(.+\.$ImageExtensions\z)))
-  {
-      ($param, $imgName) = ($1, $2);
-  }
-  elsif ($name =~ m(^[Ii]mage:(.+\.$ImageExtensions\z)))
-  {
-      ($imgName) = ($1);
-  }
-  else
-  {
-      # invalid format
-      return "INVALID $name";
-  }
-
-  # locate the file, first see if it's associated with this page
-  $imgName =~ s/\%20/ /g;  # Replace escaped spaces XXX generalize this
-  if (-f "$UploadDir/$leftChar/$id/$imgName")
-  {
-      $target = $UploadUrl."/$leftChar/$id/$imgName";
-  }
-  elsif (-f "$UploadDir/$imgName")
-  {
-      $target = $UploadUrl."/$imgName";
-  }
-  else
-  {
-      # no such image... provide a link to upload it
-      return &StoreRaw(&GetUploadLink($id, T('Upload missing image: '.$imgName.'')));
-  }
-
-  my $imgattr = {src => $target,
-                 class => "wikiimage"};
-  $imgattr->{align} = $param if $param;
-  $imgattr->{alt} = $alt if $alt;
-
-  # since browsers don't follow the standard w.r.t the center attribute
-  # we have to hack it
-  if ($param eq "center")
-  {
-      return &StoreRaw("<center>".$q->img($imgattr)."</center>");
-  }
-
-  return &StoreRaw($q->img($imgattr));
-}
-
 sub UrlLink {
   my ($rawname, $useImage) = @_;
   my ($name, $punct);
@@ -2302,10 +1939,10 @@ sub ImageAllowed {
   my ($url) = @_;
   my ($site, $imagePrefixes);
 
-  $imagePrefixes = $UploadUrl.'|http:|https:|ftp:';
+  $imagePrefixes = 'http:|https:|ftp:';
   $imagePrefixes .= '|file:'  if (!$LimitFileUrl);
   return 0  unless ($url =~ /^($imagePrefixes).+\.$ImageExtensions$/);
-  return 0  if ($url =~ /\"/);      # No HTML-breaking quotes allowed
+  return 0  if ($url =~ /"/);      # No HTML-breaking quotes allowed
   return 1  if (@ImageSites < 1);  # Most common case: () means all allowed
   return 0  if ($ImageSites[0] eq 'none');  # Special case: none allowed
   foreach $site (@ImageSites) {
@@ -2374,28 +2011,10 @@ sub StoreUpload {
 sub UploadLink {
   my ($filename) = @_;
   my ($html, $url);
-  my $id =  $OpenPageName;
  
   return $filename  if ($UploadUrl eq '');  # No bad links if misconfigured
   $UploadUrl .= '/'  if (substr($UploadUrl, -1, 1) ne '/');  # End with /
-  my $leftChar  =  substr( $id, 0, 1 );  # for indexing
-
-  #$url = $UploadUrl . $filename;
-  # locate the file, first see if it's associated with this page
-  if (-f "$UploadDir/$leftChar/$id/$filename")
-  {
-      $url = $UploadUrl."$leftChar/$id/$filename";
-  }
-  elsif (-f "$UploadDir/$filename")
-  {
-      $url = $UploadUrl."$filename";
-  }
-  else
-  {
-      # no such file... provide a link to upload it
-      return &GetUploadLink($id, T('Upload missing file: '.$filename.''));
-  }
-
+  $url = $UploadUrl . $filename;
   $html = '<a href="' . $url . '">';
   if (&ImageAllowed($url)) {
     $html .= '<img src="' . $url . '" alt="upload:' . $filename . '">';
@@ -2474,7 +2093,7 @@ sub StripUrlPunct {
 }
 
 sub WikiHeadingNumber {
-    my ($depth, $text, $useNumber) = @_;
+    my ($depth, $text) = @_;
     my ($anchor, $number);
 
     return '' unless --$depth > 0;  # Don't number H1s because it looks stupid
@@ -2507,23 +2126,15 @@ sub WikiHeadingNumber {
     $anchor = '_' . (join '_', @HeadingNumbers) unless $anchor;
     $TableOfContents .= $number . &ScriptLink("$OpenPageName#$anchor",$text)
                         . "</dd>\n<dt> </dt><dd>";
-    if ($useNumber) {
-      return &StoreHref(" name=\"$anchor\"") . $number;
-    } else {
-      return &StoreHref(" name=\"$anchor\"");
-    }
+    return &StoreHref(" name=\"$anchor\"") . $number;
 }
 
 sub WikiHeading {
-  my ($pre, $depth, $text, $useNumber) = @_;
+  my ($pre, $depth, $text) = @_;
 
   $depth = length($depth);
   $depth = 6  if ($depth > 6);
-  if ($useNumber) {
-    $text = &WikiHeadingNumber($depth,$text, 1) . $text;
-  } else {
-    $text = &WikiHeadingNumber($depth,$text, 0) . $text;
-  }
+  $text =~ s/^\s*#\s+/&WikiHeadingNumber($depth,$')/e; # $' == $POSTMATCH
   return $pre . "<H$depth>$text</H$depth>\n";
 }
 
@@ -3065,10 +2676,6 @@ sub UserCanEdit {
     return 1  if (&UserIsEditor());
     return 0;
   }
-  if($NoAnonyms) {
-    return 1  if (&UserIsEditor());
-    return 0 unless(&GetParam("username") ne "");
-  }
   if ($deepCheck) {   # Deeper but slower checks (not every page)
     return 1  if (&UserIsEditor());
     return 0  if (&UserIsBanned());
@@ -3090,26 +2697,6 @@ sub UserIsBanned {
     return 1  if ($host =~ /$_/i);
   }
   return 0;
-}
-
-# content banning from
-# http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BannedContent
-sub ContentIsBanned {
-    my ($content) = @_;
-    my ($data, $status);
-
-    # admins and editors can get around the ban
-    return 0  if (&UserIsAdmin());
-    return 0  if (&UserIsEditor());
-
-    ($status, $data) = &ReadFile("$DataDir/spamlist");
-    return 0  if (!$status);            # no file exists, so no ban
-    $data =~ s/\r//g;                   # remove \r from end of lines
-    foreach (split(/\n/, $data)) {
-        next if ((/^\s*$/) || (/^\#/));   # Skip empty, spaces, or comments
-        return 1  if ($content =~ /$_/i); # return true, content is banned
-    }
-    return 0;                           # return false, content is not banned
 }
 
 sub UserIsAdmin {
@@ -3510,9 +3097,6 @@ sub DoOtherRequest {
       &DoIndex();
     } elsif ($action eq "links") {
       &DoLinks();
-    # hacking in orphans patch
-    } elsif ($action eq "orphans") {
-      &DoOrphans();
     } elsif ($action eq "maintain") {
       &DoMaintain();
     } elsif ($action eq "pagelock") {
@@ -3523,8 +3107,6 @@ sub DoOtherRequest {
       &DoEditPrefs();
     } elsif ($action eq "editbanned") {
       &DoEditBanned();
-    } elsif ($action eq "editspam") {
-      &DoEditSpam();
     } elsif ($action eq "editlinks") {
       &DoEditLinks();
     } elsif ($action eq "login") {
@@ -3546,8 +3128,6 @@ sub DoOtherRequest {
       &DoConvert();
     } elsif ($action eq "trimusers") {
       &DoTrimUsers();
-    } elsif( $SelfBan and $action eq $SelfBan ) {
-      &DoSelfBan();
     } else {
       &ReportError(Ts('Invalid action parameter %s', $action));
     }
@@ -3559,10 +3139,6 @@ sub DoOtherRequest {
   }
   if (&GetParam("edit_ban", 0)) {
     &DoUpdateBanned();
-    return;
-  }
-  if (&GetParam("edit_spam", 0)) {
-    &DoUpdateSpam();
     return;
   }
   if (&GetParam("enter_login", 0)) {
@@ -3594,7 +3170,7 @@ sub DoOtherRequest {
     &DoPost()  if &ValidIdOrDie($id);
     return;
   }
-  &ReportError(T('Invalid URL: '.$q->url(-full=>1, -query=>1)));
+  &ReportError(T('Invalid URL.'));
 }
 
 sub DoEdit {
@@ -3611,12 +3187,6 @@ sub DoEdit {
       print T('Editing not allowed: user, ip, or network is blocked.');
       print "<p>";
       print T('Contact the wiki administrator for more information.');
-    } elsif ($NoAnonyms && !(&GetParam("username") ne "")) {
-      print T('Editing not allowed: Anonymous users not allowed.') ;
-      print "<p/>" ;
-      print T('Please click on ' .
-              &ScriptLink("action=editprefs", T('Preferences')) .
-              ' and set your username.');
     } else {
       print Ts('Editing not allowed: %s is read-only.', $SiteName);
     }
@@ -3648,7 +3218,6 @@ sub DoEdit {
   $editRows = &GetParam("editrows", 20);
   $editCols = &GetParam("editcols", 65);
   print &GetHeader('', &QuoteHtml($header), '');
-  print "<div class=wikiedit>\n";
   if ($revision ne '') {
     print "\n<b>"
           . Ts('Editing old revision %s.', $revision) . "  "
@@ -3679,9 +3248,6 @@ sub DoEdit {
   if ($revision ne "") {
     print &GetHiddenValue("revision", $revision), "\n";
   }
-  # print an editor helper
-  print (ref $EditHelp eq "CODE" ? &$EditHelp : $EditHelp)
-      if $EditHelp;
   print &GetTextArea('text', $oldText, $editRows, $editCols);
   $summary = &GetParam("summary", "*");
   print "<p>", T('Summary:'),
@@ -3696,13 +3262,13 @@ sub DoEdit {
                                -label=>T('This change is a minor edit.'));
   }
   if ($EmailNotify) {
-#    print "&nbsp;&nbsp;&nbsp;" .
-#           $q->checkbox(-name=> 'do_email_notify',
-#      -label=>Ts('Send email notification that %s has been changed.', $id));
+    print "&nbsp;&nbsp;&nbsp;" .
+           $q->checkbox(-name=> 'do_email_notify',
+      -label=>Ts('Send email notification that %s has been changed.', $id));
   }
   print "<br>";
   if ($EditNote ne '') {
-    print T((ref $EditNote eq "CODE" ? &$EditNote : $EditNote)) . '<br>';  # Allow translation
+    print T($EditNote) . '<br>';  # Allow translation
   }
   print $q->submit(-name=>'Save', -value=>T('Save')), "\n";
   $userName = &GetParam("username", "");
@@ -3731,19 +3297,9 @@ sub DoEdit {
     $MainPage = $id;
     $MainPage =~ s|/.*||;  # Only the main page name (remove subpage)
     print &WikiToHTML($oldText) . "<hr class=wikilinefooter>\n";
-    # force end of page past any images, both are needed for IE bugs
-    #print '<br style="clear:both"/>';
-    #print '<p style="clear: both" />';
     print "<h2>", T('Preview only, not yet saved'), "</h2>\n";
     print '</div>';
   }
-
-  # image upload stuff
-  showDirFiles($id);
-  print &GetUploadLink($id, T('Upload images for this page')) . "<BR>\n";
-  print $q->br();
-  print "</div>\n";
-
   print '<div class=wikifooter>';
   print &GetHistoryLink($id, T('View other revisions')) . "<br>\n";
   print &GetGotoBar($id);
@@ -3965,7 +3521,7 @@ sub DoUpdatePrefs {
     }
     undef $UserData{'stylesheet'};
   } else {
-    $stylesheet =~ s/[\">]//g;  # Remove characters that would cause problems
+    $stylesheet =~ s/[">]//g;  # Remove characters that would cause problems
     $UserData{'stylesheet'} = $stylesheet;
     print T('StyleSheet setting saved.'), '<br>';
   }
@@ -4038,61 +3594,9 @@ sub UpdatePrefNumber {
 
 sub DoIndex {
   print &GetHeader('', T('Index of all pages'), '');
-  my @allpages = &AllPagesList();
-  print "<div class=wikipagelist><br\>\n";
-  print "<h2>", Ts('%s pages found:', ($#allpages + 1)), "</h2>\n";
-  print "<ol>\n";
-  foreach my $name (@allpages) {
-      OpenPage($name);
-      OpenDefaultText();
-      my $pageText = $Text{'text'};
-
-      # redirect pages are not interesting
-      next if ($pageText =~ /^\#REDIRECT\s+(\S+)/);
-      print "<li>\n";
-      print ".... "  if ($name =~ m|/|);
-      print &GetPageLink($name);
-      if ($pageText =~ /^\#REDIRECT\s+(\S+)/)
-      {
-          print " redirects to ", &GetPageLink($1);
-      }
-      print "</li>\n";
-  }
-  print "</ol>\n";
-  print "</div>\n";
+  print '<br>';
+  &PrintPageList(&AllPagesList());
   print &GetCommonFooter();
-}
-
-# hacking in
-# patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
-sub DoOrphans {
-  print &GetHeader('', &QuoteHtml(T('Orphan Page List')), '');
-  &PrintPageList(&GetOrphanList());
-  print &GetCommonFooter();
-}
-
-# patch from http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/ListOrphans
-sub GetOrphanList {
-    my @found;
-
-    my %seen = ();
-    my @pglist = &AllPagesList();
-    foreach my $name (@pglist) {
-        $seen{$name} = 0;
-    }
-    # pages linked from menu bar aren't orphans
-    $seen{$HomePage} = 1;
-    $seen{$RCName} = 1;
-    foreach my $name (@pglist) {
-        my @links = &GetPageLinks($name, 1, 0, 0);
-        foreach my $link (@links) {
-            $seen{$link}++ if exists $seen{$link};
-        }
-    }
-    foreach my $name (sort keys %seen) {
-        push(@found, $name) if $seen{$name} < 1;
-    }
-    return @found;
 }
 
 # Create a new user file/cookie pair
@@ -4214,117 +3718,39 @@ sub DoSearch {
     return;
   }
   print &GetHeader('', &QuoteHtml(Ts('Search for: %s', $string)), '');
-  # log search results
-  open(SL, ">> $DataDir/searchlog") or
-      print "<p><strong>Could not open searchlog $DataDir/searchlog: $!</p>\n";
-  print SL scalar(localtime(time)), " ", CGI::remote_host(), " $string\n";
-  close(SL);
-  # print '<br/>';
-  if ( $XSearchDisp ) { # managed by config file (?)
-    &PrintSearchResults($string,&SearchTitleAndBody($string)) ;
-  } else {
-    &PrintPageList(&SearchTitleAndBody($string));
-  }
+  print '<br>';
+  &PrintPageList(&SearchTitleAndBody($string));
   print &GetCommonFooter();
 }
 
 sub DoBackLinks {
   my ($string) = @_;
-  my $title = $string; # keep an unmangled version
 
   print &GetHeader('', &QuoteHtml(Ts('Backlinks for: %s', $string)), '');
+  print '<br>';
   # At this time the backlinks are mostly a renamed search.
   # An initial attempt to match links only failed on subpages and free links.
   # Escape some possibly problematic characters:
-  $string =~ s/([-\'().,])/\\$1/g; 
-  # patch from
-  # http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BacklinksImproved
-  $string =~ s/([_ ])/( |_)/g; 
-  $string = ($string !~ m,/,) ? "\\b$string\\b" : "$string\\b";
-  &PrintPageList(grep($_ ne $title, &SearchTitleAndBody($string)));
+  $string =~ s/([-'().,])/\\$1/g; 
+  &PrintPageList(&SearchTitleAndBody($string));
   print &GetCommonFooter();
 }
 
 sub PrintPageList {
   my $pagename;
 
-  print "<div class=wikipagelist><br/>\n";
   print "<h2>", Ts('%s pages found:', ($#_ + 1)), "</h2>\n";
   foreach $pagename (@_) {
     print ".... "  if ($pagename =~ m|/|);
     print &GetPageLink($pagename), "<br>\n";
   }
-  print "</div>\n";
-}
-
-sub PrintSearchResults {
-    my ($searchstring, @results) = @_ ;
-    my $and = T('and');
-    my $or = T('or');
-    my $searchstring = join('|', split(/ +(?:$and|$or) +/, $searchstring));
-    my ($snippetlen, $maxsnippets) = (100, 4) ; #  these seem nice.
-    print "<div class=wikipagelist>\n";
-    print $q->h2(Ts('%s pages found:', ($#results + 1)));
-    my $files = 0; #($searchstring =~ /^\^#FILE/); # usually skip files
-    foreach my $name (@results) {
-	OpenPage($name);
-	OpenDefaultText();
-	my $pageText = QuoteHtml($Text{'text'});
-	#  get the page, filter it, remove all tags
-	$pageText =~ s/$FS//g;	# Remove separators (paranoia)
-	$pageText =~ s/[\s]+/ /g;	#  Shrink whitespace
-	$pageText =~ s/([-_=\\*\\.]){10,}/$1$1$1$1$1/g ; # e.g. shrink "----------"
-	my $htmlre = join('|',(@HtmlPairs, 'pre', 'nowiki', 'code'));
-	$pageText =~ s/\<\/?($htmlre)(\s[^<>]+?)?\>//gi;
-	#  entry header
-	print '<p/>' . $q->span({-class=>'wikisearchhead'}, GetPageLink($name));
-	if ($files) {
-            $pageText =~ /^#FILE ([^ ]+)/;
-            print $1;
-	} else {
-            print "<div class=wikisearchtext>";
-            # show a snippet from the top of the document
-            my $j = index($pageText, ' ', $snippetlen); # end on word boundary
-            my $t = substr($pageText, 0, $j);
-            $t =~ s/($searchstring)/<strong>\1<\/strong>/gi;
-            print $t, ' ', $q->b('...');
-            $pageText = substr($pageText, $j); # to avoid rematching
-            # search for occurrences of searchstring
-            my $jsnippet = 0 ;
-            while ($jsnippet < $maxsnippets && $pageText =~ m/($searchstring)/i) {
-                $jsnippet++;
-                if (($j = index($pageText, $1)) > -1 ) {
-                    # get substr containing (start of) match, ending on word boundaries
-                    my $start = index($pageText, ' ', $j-($snippetlen/2));
-                    $start = 0 if ($start == -1);
-                    my $end = index($pageText, ' ', $j+($snippetlen/2));
-                    $end = length($pageText ) if ($end == -1);
-                    $t = substr($pageText, $start, $end-$start);
-                    # highlight occurrences and tack on to output stream.
-                    $t =~ s/($searchstring)/<strong>\1<\/strong>/gi;
-                    print $t, ' ', $q->b('...');
-                    # truncate text to avoid rematching the same string.
-                    $pageText = substr($pageText, $end);
-                }
-            }
-	}
-	#  entry trailer
-        print "</div>";
-	print $q->span({-class=>'wikisearchinfo'},
-	  int((length($pageText)/1024)+1) . 'K - ' . T('last updated') . ' '
-	  . TimeToText($Section{ts}) . ' ' . T('by') . ' '
-	  . GetAuthorLink($Section{'host'}, $Section{'username'})), '</p>';
-      }
-    print "</div>\n";
 }
 
 sub DoLinks {
   print &GetHeader('', &QuoteHtml(T('Full Link List')), '');
-  print "<div class=wikipagelist>\n";
-  print "<p/><table class=wikitable style=\"background-color: white;\">\n";
+  print "<hr><pre>\n\n\n\n\n";  # Extra lines to get below the logo
   &PrintLinkList(&GetFullLinkList());
-  print "</table>\n";
-  print "</div>\n";
+  print "</pre>\n";
   print &GetMinimumFooter();
 }
 
@@ -4337,7 +3763,7 @@ sub PrintLinkList {
     $pgExists{$page} = 1;
   }
   $names = &GetParam("names", 1);
-  $editlink = &GetParam("editlink", 1); # always include edit links
+  $editlink = &GetParam("editlink", 0);
   foreach $pagelines (@_) {
     @links = ();
     foreach $page (split(' ', $pagelines)) {
@@ -4359,18 +3785,10 @@ sub PrintLinkList {
       }
       push(@links, $link);
     }
-    # print this out as a table
-    my $name = shift(@links);
-    if ($names)
-    {
-        print $q->Tr($q->td(
-                            [$name,
-                             join(' ', @links)])),"\n";
+    if (!$names) {
+      shift(@links);
     }
-    else
-    {
-        print $q->Tr($q->td([join(' ', @links)])),"\n";
-    }
+    print join(' ', @links), "\n";
   }
 }
 
@@ -4479,14 +3897,6 @@ sub DoPost {
   my $authorAddr = $ENV{REMOTE_ADDR};
 
   if (!&UserCanEdit($id, 1)) {
-    sleep $SpamDelay if $SpamDelay;
-    # This is an internal interface--we don't need to explain
-    &ReportError(Ts('Editing not allowed for %s.', $id));
-    return;
-  }
-
-  if (&ContentIsBanned($string)) {
-    sleep $SpamDelay if $SpamDelay;
     # This is an internal interface--we don't need to explain
     &ReportError(Ts('Editing not allowed for %s.', $id));
     return;
@@ -4506,32 +3916,6 @@ sub DoPost {
   }
   # Add a newline to the end of the string (if it doesn't have one)
   $string .= "\n"  if (!($string =~ /\n$/));
-  # replace any signature escapes
-  # derived from the patch at
-  # http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/AutoSignature
-  {
-      my $signature = &GetParam("username", "");
-      my $linkedsig = "[[$signature]]";
-      if ( $signature eq "" ) {
-          $signature = "Guest" ;
-          $linkedsig = "''Guest''";
-      }
-      my $datestr = scalar(localtime(time));
-      for ( $string ) {
-          # ~~~~~ date only
-          s[ ^(:*)\s*~~~~~ ][\n$1'''$datestr:''' ]xmg;
-          s[ ~~~~~\s*$     ][ -- $datestr ]xmg;
-          s[ ~~~~~         ][ '''$datestr''' ]xg;
-          # ~~~~ signature and date
-          s[ ^(:*)\s*~~~~ ][\n$1'''$signature $datestr:''' ]xmg;
-          s[ ~~~~\s*$     ][ -- $linkedsig $datestr ]xmg;
-          s[ ~~~~         ][ '''$signature''' $datestr ]xg;
-          # ~~~ signature only
-          s[ ^(:*)\s*~~~ ][\n$1'''$signature:''' ]xmg;
-          s[ ~~~\s*$     ][ -- $linkedsig ]xmg;
-          s[ ~~~         ][ '''$signature''' ]xg;
-      }
-  }
   # Lock before getting old page to prevent races
   # Consider extracting lock section into sub, and eval-wrap it?
   # (A few called routines can die, leaving locks.)
@@ -4583,7 +3967,7 @@ sub DoPost {
   $user = &GetParam("username", "");
   # If the person doing editing chooses, send out email notification
   if ($EmailNotify) {
-    &EmailNotify($id, $user); # if &GetParam("do_email_notify", "") eq 'on';
+    &EmailNotify($id, $user) if &GetParam("do_email_notify", "") eq 'on';
   }
   if (&GetParam("recent_edit", "") eq 'on') {
     $isEdit = 1;
@@ -4685,7 +4069,6 @@ sub EmailNotify {
     $address = join ",", <EMAIL>;
     $address =~ s/\n//g;
     close(EMAIL);
-
     my $home_url = $q->url();
     my $page_url = $home_url . "?$id";
     my $editors_summary = $q->param("summary");
@@ -4717,34 +4100,23 @@ END_MAIL_CONTENT
 }
 
 sub SearchTitleAndBody {
-    my $string = shift;
-    my $and = T('and');
-    my $or = T('or');
-    my @strings = split(/ +$and +/, $string);
-    my @found;
-    foreach my $name (AllPagesList()) {
-	OpenPage($name);
-	OpenDefaultText();
-	my $found = 1; # assume found
-	foreach my $str (@strings) {
-            my @temp = split(/ +$or +/, $str);
-            $str = join('|', @temp);
-            if (not ($Text{'text'} =~ /$str/i)) {
-                $found = 0;
-                last;
-            }
-	}
-	if ($found or $name =~ /$string/i) {
-            push(@found, $name);
-	} elsif ($FreeLinks && ($name =~ m/_/)) {
-            my $freeName = $name;
-            $freeName =~ s/_/ /g;
-            if ($freeName =~ /$string/i) {
-                push(@found, $name);
-            }
-	}
+  my ($string) = @_;
+  my ($name, $freeName, @found);
+
+  foreach $name (&AllPagesList()) {
+    &OpenPage($name);
+    &OpenDefaultText();
+    if (($Text{'text'} =~ /$string/i) || ($name =~ /$string/i)) {
+      push(@found, $name);
+    } elsif ($FreeLinks && ($name =~ m/_/)) {
+      $freeName = $name;
+      $freeName =~ s/_/ /g;
+      if ($freeName =~ /$string/i) {
+        push(@found, $name);
+      }
     }
-    return @found;
+  }
+  return @found;
 }
 
 sub SearchBody {
@@ -5072,62 +4444,6 @@ sub DoUpdateBanned {
   }
   print &GetCommonFooter();
 }
-
-sub DoSelfBan {
-  print "Content-type: text/plain\n\n";
-  sleep $SpamDelay if $SpamDelay;
-  print "Congratulations, you have banned your own IP!\n";
-
-  my $banlist = ReadFile("$DataDir/banlist");
-  my $date = &TimeToText($Now);
-
-  $banlist .= "# self-ban on $date\n^$ENV{REMOTE_ADDR}\n\n";
-
-  WriteStringToFile("$DataDir/banlist", $banlist );
-}
-
-#------------------------------------------------------------------------
-# content banning from
-# http://www.usemod.com/cgi-bin/wiki.pl?WikiPatches/BannedContent
-sub DoEditSpam {
-    my ($spamList, $status);
-  
-    print &GetHeader("", "Editing Spam List", "");
-    return  if (!&UserIsAdminOrError());
-    ($status, $spamList) = &ReadFile("$DataDir/spamlist");
-    $spamList = ""  if (!$status);
-    print &GetFormStart();
-    print GetHiddenValue("edit_spam", 1), "\n";
-    print "<b>Banned content list:</b><br>\n";
-    print "<p>Each entry is either a commented line (starting with #), ",
-      "or a Perl regular expression";
-    print &GetTextArea('spamlist', $spamList, 20, 50);
-    print "<br>", $q->submit(-name=>'Save'), "\n";
-    print "<hr>\n";
-    print $q->endform;
-    print &GetCommonFooter("");
-    print &GetMinimumFooter();
-}
-  
-sub DoUpdateSpam {
-    my ($newList, $fname);
-  
-    print &GetHeader("", "Updating spam list", "");
-    return  if (!&UserIsAdminOrError());
-    $fname = "$DataDir/spamlist";
-    $newList = &GetParam("spamlist", "#Empty file");
-    if ($newList eq "") {
-        print "<p>Empty spam list or error.";
-        print "<p>Resubmit with at least one space character to remove.";
-    } elsif ($newList =~ /^\s*$/s) {
-        unlink($fname);
-        print "<p>Removed spam list";
-    } else {
-        &WriteStringToFile($fname, $newList);
-        print "<p>Updated spam list";
-    }
-    print &GetCommonFooter();
-  }
 
 # ==== Editing/Deleting pages and links ====
 sub DoEditLinks {
@@ -5538,9 +4854,7 @@ sub GetAdminBar {
     $result .= &GetPageLockLink($id, 1, T('Lock page'));
   }
   $result .= " | " . &GetDeleteLink($id, T('Delete this page'), 0);
-  $result .= " | " . &ScriptLink("action=editbanned", T("Edit Banned Hosts"));
-  $result .= " | " . &ScriptLink("action=editspam",
-                                 T("Edit Banned Content"));
+  $result .= " | " . &ScriptLink("action=editbanned", T("Edit Banned List"));
   $result .= " | " . &ScriptLink("action=maintain", T("Run Maintenance"));
   $result .= " | " . &ScriptLink("action=editlinks", T("Edit/Rename pages")); 
   if (-f "$DataDir/noedit") {
@@ -5585,63 +4899,21 @@ sub DoDeletePage {
   print &GetCommonFooter();
 }
 
-# from CWICK...
-sub showDirFiles {
-  my $id = shift;
-  my ( $leftChar, $targetDir, $nextname, $fileCount );
-
-  $leftChar   =  substr( $id, 0, 1 );
-  $targetDir  =  "$UploadDir/$leftChar/$id";
-
-  $fileCount  =  0;
-  print "<h3>Local image file list:</h3>\n";
-  print "<ul>";
-  if( opendir( DIR, $targetDir) ) {
-    while( $nextname = readdir( DIR ) )  {
-      if( substr( $nextname, 0, 1 ) ne '.' ) {
-        print $q->li($q->a({-href => "$UploadUrl/$leftChar/$id/$nextname"},
-                           $nextname)),"\n";
-        $fileCount  =  $fileCount + 1;
-      }
-    }
-    closedir(DIR);
-  }
-  if( $fileCount == 0 ) {
-    print "<I>No image files available.</I><BR/>\n";
-  }
-  print "</ul>\n";
-}
-
 # Thanks to Ross Kowalski and Iliyan Jeliazkov for original uploading code
 sub DoUpload {
   print &GetHeader('', T('File Upload Page'), '');
   if (!$AllUpload) {
     return if (!&UserIsEditorOrError());
   }
-  # XXX intro text here...
-  print "<div class=wikiupload>\n";
-  print $q->p(Ts('The current upload size limit is %s.', $MaxPost),
-              Ts('Change the %s variable to increase this limit.',
-                 '$MaxPost'));
-  print $q->br();
-  print $q->start_form(-method => "post",
-                       -action => $ScriptName,
-                       -enctype => "multipart/form-data");
-  print $q->hidden("upload", "1");
-  print 'File to Upload: ', $q->filefield(-name=>"file");
-  print $q->br(),$q->br();
-  print $q->submit(-name  => "Submit",
-                   -value => "Upload");
-  if (my $id = $q->param('id'))
-  {
-      print $q->hidden("id", $id);
-      print $q->p("Image to be associated with the page",
-                  &GetPageLink($id));
-      showDirFiles($id);
-  }
-  print $q->end_form();
-  print "</div>\n";
-
+  print '<p>' . Ts('The current upload size limit is %s.', $MaxPost) . ' '
+        . Ts('Change the %s variable to increase this limit.', '$MaxPost');
+  print '</p><br>';
+  print '<FORM METHOD="post" ACTION="' . $ScriptName
+        . '" ENCTYPE="multipart/form-data">';
+  print '<input type="hidden" name="upload" value="1" />';
+  print 'File to Upload: <INPUT TYPE="file" NAME="file"><br><BR>';
+  print '<INPUT TYPE="submit" NAME="Submit" VALUE="Upload">';
+  print '</FORM>';
   print &GetCommonFooter(); 
 }
 
@@ -5656,55 +4928,16 @@ sub SaveUpload {
   $UploadUrl .= '/'  if (substr($UploadUrl, -1, 1) ne '/');  # End with /
   $filename = $q->param('file');
   $filename =~ s/.*[\/\\](.*)/$1/;  # Only name after last \ or /
-
-  # make sure the directory exists
-  &CreateDir($UploadDir);
-
-  # if it's a per-page upload, prepend dirs
-  my $subdir = "";
-  if (my $id = $q->param('id'))
-  {
-      my $first = substr($id, 0, 1);
-      $subdir = "$first/$id/";
-      &CreateDir($UploadDir.$first);
-      &CreateDir($UploadDir.$subdir);
-  }
-
   $uploadFilehandle = $q->upload('file');
-  if (not $uploadFilehandle)
-  {
-      print "<H3>Error: upload failed.<BR/><BR/>",
-              "'" . $q->cgi_error, "'<BR/><BR/>";
-      return;
-  }
-  if (not open(UPLOADFILE, ">$UploadDir$subdir$filename"))
-  {
-      print "<H3>Error: unable to write to $UploadDir$subdir$filename: $!<BR/><BR/>";
-      return;
-  }
+  open UPLOADFILE, ">$UploadDir$filename";
   while (<$uploadFilehandle>) { print UPLOADFILE; }
   close UPLOADFILE;
-
-  print $q->p("You may include this image in this wiki page with one of these example links:");
+  print T('The wiki link to your file is:') . "\n<br><BR>";
   $printFilename = $filename;
-  # XXX generalize this
   $printFilename =~ s/ /\%20/g;  # Replace spaces with escaped spaces
-  if ($q->param('id'))
-  {
-      print $q->pre("image:".$printFilename."\n".
-                    "image:center::".$printFilename."\n".
-                    "image:right::".$printFilename."\n".
-                    "image:left::".$printFilename."\n");
-      print $q->p("This image is associated with the page",
-                  &GetPageLink($q->param('id')));
-  }
-  else
-  {
-      print $q->pre("upload:" . $printFilename . "\n");
-  }
-
+  print "upload:" . $printFilename . "<BR><BR>\n";
   if ($filename =~ /${ImageExtensions}$/) {
-    print '<HR><img src="' . $UploadUrl . $subdir.$filename . '">' . "\n";
+    print '<HR><img src="' . $UploadUrl . $filename . '">' . "\n";
   }
   print &GetCommonFooter();
 }
