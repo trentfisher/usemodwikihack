@@ -20,7 +20,7 @@
 
 
 BEGIN {
-  $wiki = 'wiki.cgi';
+  $wiki = shift || 'wiki.cgi';
 
   if (not -e $wiki) {
     print "Content-Type: text/plain\n\n";
@@ -37,6 +37,7 @@ package UseModWiki;
 do $ConfigFile
   if $UseConfig and defined $ConfigFile and -f $ConfigFile;
 
+setDirNames();
 InitLinkPatterns();
 
 $| = 1;
