@@ -1,0 +1,1 @@
+This project is my personal fork of UseModWiki 1.0 for the purposes of experimentation with increased modularity, xhtml compliance, integration with Google Maps API and other things.
